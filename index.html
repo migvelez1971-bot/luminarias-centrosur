@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Registro de luminarias en falla</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--tx:#1b1f24;--mu:#5d6773;--bd:#d9dee4;--pr:#1d6fd8;--ok:#1f9d55;--er:#d93a3a;--wa:#e8a100;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14171b;--card:#1d2229;--tx:#e9edf1;--mu:#9aa5b1;--bd:#2f3742;--pr:#5aa2ff;--ok:#3cc07a;--er:#ff6b6b;--wa:#f2b73a}}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{padding:14px 14px 4px}h1{font-size:19px;margin:0;text-align:center}h2{font-size:16px;margin:0 0 8px}
+.sub{color:var(--mu);font-size:13px;text-align:right}
+main{padding:8px 12px 40px;max-width:820px;margin:auto}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:12px;margin:10px 0}
+label{display:block;font-size:12px;color:var(--mu);margin:8px 0 2px}
+input,select,textarea,button{font:inherit;color:inherit;width:100%;padding:9px;border:1px solid var(--bd);border-radius:8px;background:var(--bg)}
+button{background:var(--pr);color:#fff;border:0;font-weight:600;cursor:pointer}
+button.s{background:var(--bg);color:var(--tx);border:1px solid var(--bd)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.utm{font-family:ui-monospace,Menlo,monospace;font-size:13px;color:var(--pr);margin-top:6px}
+.tw{overflow-x:auto}table{border-collapse:collapse;font-size:12px;min-width:760px;width:100%}
+th,td{border-bottom:1px solid var(--bd);padding:6px;text-align:left;white-space:nowrap}th{color:var(--mu);font-weight:600}
+.b{display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;color:#fff}
+.map{width:100%;height:300px;background:var(--bg);border:1px solid var(--bd);border-radius:10px;display:block}
+.kpi{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 0}.kpi div{background:var(--bg);border:1px solid var(--bd);border-radius:10px;padding:8px;text-align:center}.kpi b{display:block;font-size:17px}.kpi span{font-size:11px;color:var(--mu)}
+ol{padding-left:20px;margin:6px 0}a{color:var(--pr)}.msg{font-size:12px;color:var(--mu);margin-top:6px}
+.row{display:flex;gap:8px;margin-top:8px}.row>*{flex:1}
+.sm{width:auto;padding:5px 9px;font-size:12px;margin:0 2px}.ed{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:20;overflow:auto;padding:max(12px,env(safe-area-inset-top,0px)) 12px 24px}.ed .card{max-width:520px;margin:20px auto}
+</style></head><body>
+<header><h1>💡 Registro de luminarias en falla y novedades para mantenimiento</h1><div class="sub">By Migvelez</div></header>
+<main>
+<section class="card"><h2>1. Registrar luminaria o novedad</h2>
+<div class="g2" style="margin-bottom:10px"><button type="button" id="cL">💡 Luminaria</button><button type="button" class="s" id="cR">🔧 Mantenimiento de redes</button></div>
+<div style="margin:0 0 8px;font-weight:600">📍 Opción 1: Registro automático</div>
+<button id="gps" type="button" style="padding:16px;font-size:17px">📍 REGISTRAR UBICACIÓN ACTUAL (GPS)</button>
+<div class="utm" id="gpsinfo">Toque el botón estando junto a la luminaria para capturar su georreferencia.</div>
+<div class="msg" id="gpsperm"></div>
+<details id="gph"><summary class="sub" style="cursor:pointer">¿El GPS no funciona? Cómo dar permiso de ubicación</summary><div class="msg" id="gphm" style="color:var(--er);font-weight:600"></div>
+<div class="msg"><b>1. Active la ubicación del teléfono:</b> deslice el panel superior y active «Ubicación» o «GPS».<br><b>2. Android (Chrome):</b> toque el candado junto a la dirección → Permisos → Ubicación → Permitir.<br><b>3. iPhone (Safari):</b> Ajustes → Privacidad y seguridad → Localización → Activada; y en Safari, botón «aA» → Ajustes del sitio web → Ubicación → Permitir.<br><b>4.</b> Salga a un lugar abierto y vuelva a tocar «REGISTRAR UBICACIÓN ACTUAL (GPS)».</div>
+<a id="gout" class="sm" target="_blank" rel="noopener" style="display:none;background:var(--pr);color:#fff;border-radius:8px;text-decoration:none;font-weight:600;margin-top:6px">Abrir esta página directamente en el navegador</a></details>
+<details id="man" open><summary style="margin-top:12px;cursor:pointer;font-weight:600">✏️ Opción 2: ingresar georreferencia UTM manualmente</summary>
+<input type="hidden" id="lat"><input type="hidden" id="lon">
+<div class="g2"><div><label>Este (m)</label><input id="ue" inputmode="decimal" placeholder="Ej. 722500.0"></div><div><label>Norte (m)</label><input id="un" inputmode="decimal" placeholder="Ej. 9679800.0"></div></div>
+<div class="g2" style="display:none"><div><label>Zona UTM</label><input id="uz" inputmode="numeric" value="17"></div><div><label>Hemisferio</label><select id="uh"><option value="S">Sur</option><option value="N">Norte</option></select></div></div>
+</details>
+<div class="utm" id="utm">Lat/Lon: —</div>
+<label>Número de poste</label><input id="poste" placeholder="Ej. P-10234">
+<div class="g2"><div><div id="wf"><label>Tipo de falla</label><select id="falla"><option>Apagada</option><option>Prendida de día</option><option>Intermitente / parpadea</option><option>Encendido parcial</option><option>Brazo o luminaria dañada</option><option>Sin energía en el circuito</option></select></div><div id="wr" style="display:none"><label>Tipo de mantenimiento de redes</label><select id="redes"><option>Calibración de tensor</option><option>Calibración de redes</option><option>Poda de vegetación</option><option>Mantenimiento de trafo</option><option>Otro</option></select></div></div>
+<div><label>Mantenimiento</label><select id="mant"><option>Pendiente</option><option>Ejecutado</option></select></div></div>
+<div class="g2"><div id="wt"><label>Tipo de luminaria</label><select id="tipo"><option>Sodio AP 70 W</option><option>Sodio AP 100 W</option><option>Sodio AP 150 W</option><option>Sodio AP 250 W</option><option>LED 30–60 W</option><option>LED 80–120 W</option><option>LED &gt; 120 W</option><option>Mercurio</option><option>Otro</option></select></div>
+<div id="wg"><label>Grupo que ejecutó el trabajo</label><input id="grupo" placeholder="Ej. Cuadrilla 3"></div></div>
+<label>Observación</label><textarea id="obs" rows="2"></textarea>
+<div class="row"><button id="add" type="button">Guardar registro</button><button class="s" id="clr" type="button">Limpiar</button></div>
+<div class="msg" id="m1"></div></section>
+
+<section class="card"><h2>2. Mapa y ruta óptima</h2>
+<div class="sub" style="margin-bottom:4px"><b>Partida:</b> Agencia CENTROSUR Biblián</div>
+<div class="g3" style="align-items:end"><div><label>Este (m)</label><input id="ae" inputmode="decimal"></div><div><label>Norte (m)</label><input id="an" inputmode="decimal"></div><div><label>&nbsp;</label><button id="asv" type="button">Guardar partida</button></div></div>
+<div class="msg" id="am"></div>
+<div class="g3"><div><label>V. prom. (km/h)</label><input id="vel" type="number" value="30" min="5"></div><div><label>Min. por luminaria</label><input id="srv" type="number" value="15" min="0"></div><div><label>Factor vial</label><input id="fv" type="number" value="1.3" step="0.1" min="1"></div></div>
+<div class="row"><button id="ruta" type="button">⚡ Calcular ruta y abrir en Google Maps</button></div>
+<div class="kpi"><div><b id="kd">—</b><span>Distancia</span></div><div><b id="kt">—</b><span>Traslado</span></div><div><b id="kc">—</b><span>Total con trabajo</span></div></div>
+<svg class="map" id="map" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid meet"></svg>
+<div class="msg">Esquema a escala (UTM) con todos los puntos. Rojo = pendiente, verde = ejecutado, azul = partida. Para navegar use «Calcular ruta y abrir en Google Maps».</div>
+<ol id="orden"></ol><div id="tramos"></div><div class="msg" id="m2"></div></section>
+
+<section class="card"><h2>3. Hoja de registros <span class="sub" id="cnt"></span></h2>
+<div class="row"><button class="s" id="csv" type="button">⬇ Descargar CSV (Excel/Sheets)</button><button class="s" id="cp" type="button">Copiar para pegar en Sheets</button></div>
+<div class="tw"><table><thead><tr><th>#</th><th>Poste</th><th>UTM (Este / Norte / Zona)</th><th>Falla / Mant. de red</th><th>Mant.</th><th>Luminaria</th><th>Grupo</th><th>Observación</th><th></th></tr></thead><tbody id="tb"></tbody></table></div>
+<div class="msg" id="m3"></div></section>
+<section class="card"><details id="cfgd"><summary style="cursor:pointer;font-weight:600">⚙ Sincronización con Google Sheets</summary>
+<label>Enlace (URL) de la aplicación web</label><input id="cu" inputmode="url" autocapitalize="off" autocomplete="off" placeholder="https://script.google.com/macros/s/…/exec">
+<label>Clave de acceso</label><input id="ck" type="password" autocapitalize="off" autocomplete="off" placeholder="Clave que entrega el supervisor">
+<div class="row"><button id="cs" type="button">Guardar y sincronizar</button></div>
+<div class="msg" id="syncst"></div><div class="msg" id="syncdet" style="font-size:11px;word-break:break-all"></div></details></section>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+let rows=[],start=null,route=[],db=null,shared=false,confDel=null,gpsBusy=false,autoTried=false;
+const LS='lum_v1';
+// ---------- Sincronización con Google Sheets (vía Apps Script) ----------
+const SYNC_URL_DEF='https://script.google.com/macros/s/AKfycbzecyu6PIvhivup88MsTtDYjIgTakX-JC7O5ZPVKUoUEIedRaYRqT0whdgiq-ovFrxr/exec';
+let sync={url:'',key:'',on:false,busy:false,ok:false,bad:false},outbox=[],timer=null,sig='';
+const OB='lum_outbox',qid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+try{outbox=JSON.parse(localStorage.getItem(OB)||'[]')}catch(e){outbox=[]}
+function persist(){try{localStorage.setItem(LS,JSON.stringify(rows));localStorage.setItem(OB,JSON.stringify(outbox))}catch(e){}}
+
+// ---------- UTM (WGS84) ----------
+function utm(lat,lon){const a=6378137,f=1/298.257223563,k=.9996,e2=f*(2-f),ep=e2/(1-e2),z=Math.floor((lon+180)/6)+1,l0=((z-1)*6-180+3)*Math.PI/180,p=lat*Math.PI/180,l=lon*Math.PI/180;
+const N=a/Math.sqrt(1-e2*Math.sin(p)**2),T=Math.tan(p)**2,C=ep*Math.cos(p)**2,A=Math.cos(p)*(l-l0);
+const M=a*((1-e2/4-3*e2*e2/64-5*e2**3/256)*p-(3*e2/8+3*e2*e2/32+45*e2**3/1024)*Math.sin(2*p)+(15*e2*e2/256+45*e2**3/1024)*Math.sin(4*p)-(35*e2**3/3072)*Math.sin(6*p));
+const E=k*N*(A+(1-T+C)*A**3/6+(5-18*T+T*T+72*C-58*ep)*A**5/120)+5e5;
+let Nn=k*(M+N*Math.tan(p)*(A*A/2+(5-T+9*C+4*C*C)*A**4/24+(61-58*T+T*T+600*C-330*ep)*A**6/720));if(lat<0)Nn+=1e7;
+return{e:E,n:Nn,z:z,b:"CDEFGHJKLMNPQRSTUVWX"[Math.max(0,Math.min(19,Math.floor((lat+80)/8)))]}}
+const fu=u=>`${u.e.toFixed(1)} / ${u.n.toFixed(1)} / ${u.z}${u.b}`;
+const num=v=>{let s=String(v).trim().replace(/\s/g,'');if(/^\d{1,3}(,\d{3})+(\.\d+)?$/.test(s))s=s.replace(/,/g,'');else if(/^\d{1,3}(\.\d{3})+(,\d+)?$/.test(s))s=s.replace(/\./g,'').replace(',','.');else s=s.replace(',','.');return s===''?NaN:Number(s)};
+function fromUTM(E,N,z,south){const a=6378137,f=1/298.257223563,k=.9996,e2=f*(2-f),ep=e2/(1-e2),e1=(1-Math.sqrt(1-e2))/(1+Math.sqrt(1-e2));const x=E-5e5,y=south?N-1e7:N,mu=(y/k)/(a*(1-e2/4-3*e2*e2/64-5*e2**3/256));
+const p1=mu+(3*e1/2-27*e1**3/32)*Math.sin(2*mu)+(21*e1*e1/16-55*e1**4/32)*Math.sin(4*mu)+(151*e1**3/96)*Math.sin(6*mu)+(1097*e1**4/512)*Math.sin(8*mu);
+const N1=a/Math.sqrt(1-e2*Math.sin(p1)**2),T1=Math.tan(p1)**2,C1=ep*Math.cos(p1)**2,R1=a*(1-e2)/Math.pow(1-e2*Math.sin(p1)**2,1.5),D=x/(N1*k);
+const lat=p1-(N1*Math.tan(p1)/R1)*(D*D/2-(5+3*T1+10*C1-4*C1*C1-9*ep)*D**4/24+(61+90*T1+298*C1+45*T1*T1-252*ep-3*C1*C1)*D**6/720);
+const lon=((z-1)*6-180+3)+(D-(1+2*T1+C1)*D**3/6+(5-2*C1+28*T1-3*C1*C1+8*ep+24*T1*T1)*D**5/120)/Math.cos(p1)*180/Math.PI;return{lat:lat*180/Math.PI,lon}}
+function updUTM(){if(!$('ue').value&&!$('un').value)autoTried=false;const E=num($('ue').value),N=num($('un').value),z=parseInt($('uz').value,10),s=$('uh').value==='S';
+if(isFinite(E)&&isFinite(N)&&z>=1&&z<=60&&E>1e5&&E<9e5&&N>=0&&N<1.0e7+1e6){const p=fromUTM(E,N,z,s);$('lat').value=p.lat.toFixed(7);$('lon').value=p.lon.toFixed(7);$('utm').textContent='Lat/Lon: '+p.lat.toFixed(6)+', '+p.lon.toFixed(6)}else{$('lat').value='';$('lon').value='';$('utm').textContent='Lat/Lon: —'}}
+['ue','un','uz','uh'].forEach(i=>{$(i).oninput=$(i).onchange=()=>{$(i).style.borderColor='';updUTM()}});
+const inFrame=(()=>{try{return window.top!==window.self}catch(x){return true}})();
+function gps(cb){if(!navigator.geolocation)return cb(null,{code:0,message:'Este navegador no ofrece geolocalización'});const hi={enableHighAccuracy:true,timeout:15000,maximumAge:0},lo={enableHighAccuracy:false,timeout:20000,maximumAge:60000};navigator.geolocation.getCurrentPosition(p=>cb(p.coords),e=>{if(e&&e.code===1)return cb(null,e);navigator.geolocation.getCurrentPosition(p=>cb(p.coords),e2=>cb(null,e2),lo)},hi)}
+function gpsHelp(e){$('gph').open=true;$('gphm').textContent=!e?'':e.code===1?'Permiso de ubicación denegado o bloqueado'+(inFrame?' (la página está dentro del visor de Claude, que puede bloquear el GPS).':'.'):e.code===2?'Ubicación no disponible: active el GPS del teléfono y salga a un lugar abierto.':e.code===3?'Tiempo agotado: intente de nuevo a cielo abierto.':(e.message||'');if($('gout').getAttribute('href'))$('gout').style.display='inline-block'}
+async function permCheck(){try{const p=await navigator.permissions.query({name:'geolocation'}),t={granted:'✔ Permiso de ubicación concedido',prompt:'Permiso pendiente: al tocar el botón GPS, el teléfono le pedirá permitir la ubicación.',denied:'✖ Permiso de ubicación BLOQUEADO: siga los pasos de «¿El GPS no funciona?»'};$('gpsperm').textContent=t[p.state]||'';p.onchange=permCheck;if(p.state==='denied')$('gph').open=true}catch(x){$('gpsperm').textContent=''}}
+function setupOut(){let u='';try{u=location.href}catch(x){}if(/^https:/.test(u))$('gout').href=u}
+function capGps(){if(gpsBusy)return;gpsBusy=true;$('m1').style.cssText='';$('m1').textContent='Obteniendo ubicación…';gps((c,e)=>{gpsBusy=false;if(!c){gpsHelp(e);$('m1').textContent=(e&&e.code===1)?'El GPS está bloqueado (permiso denegado o restringido por el visor). Abra el enlace directamente en el navegador del celular y permita la ubicación, o ingrese las coordenadas UTM.':'No se pudo obtener el GPS'+(e&&e.message?' ('+e.message+')':'')+'. Ingrese las coordenadas UTM manualmente.';return}
+const u=utm(c.latitude,c.longitude);$('ue').value=u.e.toFixed(1);$('un').value=u.n.toFixed(1);$('uz').value=u.z;$('uh').value=c.latitude<0?'S':'N';updUTM();$('gpsinfo').textContent='✔ UTM: '+fu(u)+' · precisión ≈ '+Math.round(c.accuracy)+' m';$('m1').textContent='Ubicación cargada en Este, Norte y zona. Ahora complete los datos y guarde.'})}
+$('gps').onclick=capGps;
+const autoGps=()=>{if(!autoTried&&!$('ue').value&&!$('un').value){autoTried=true;capGps()}};
+['ue','un'].forEach(i=>$(i).addEventListener('focus',autoGps));
+$('man').querySelector('summary').addEventListener('click',autoGps);
+let cat='luminaria';
+function setCat(c){cat=c;const R=c==='redes';$('wf').style.display=R?'none':'';$('wr').style.display=R?'':'none';$('wt').style.display=R?'none':'';$('wg').style.gridColumn=R?'1/-1':'';$('cL').className=R?'s':'';$('cR').className=R?'':'s'}
+$('cL').onclick=()=>setCat('luminaria');$('cR').onclick=()=>setCat('redes');
+$('clr').onclick=()=>{['ue','un','poste','grupo','obs'].forEach(i=>$(i).value='');updUTM();$('gpsinfo').textContent='Toque el botón estando junto a la luminaria para capturar su georreferencia.'};
+function warn(t){const m=$('m1');m.style.cssText='color:#fff;background:var(--er);padding:8px;border-radius:8px;font-size:13px;font-weight:600';m.textContent=t;m.scrollIntoView({behavior:'smooth',block:'center'})}
+// ---------- Persistencia ----------
+function save(r){rows=rows.filter(x=>x.id!==r.id);rows.push(r);if(sync.on){outbox=outbox.filter(o=>!(o.op==='set'&&o.row.id===r.id));outbox.push({op:'set',row:r,q:qid()})}persist();render();flush()}
+function del(id){rows=rows.filter(x=>x.id!==id);if(sync.on){outbox=outbox.filter(o=>!(o.op==='set'&&o.row.id===id));outbox.push({op:'del',id:id,q:qid()})}persist();render();flush()}
+$('add').onclick=()=>{const E=num($('ue').value),Nn=num($('un').value),z=parseInt($('uz').value,10);
+const bad=!(isFinite(E)&&E>1e5&&E<9e5)?'ue':!(isFinite(Nn)&&Nn>1e3&&Nn<1e7)?'un':!(z>=1&&z<=60)?'uz':null;
+['ue','un','uz'].forEach(i=>$(i).style.borderColor='');
+if(bad){const miss=!$('ue').value.trim()&&!$('un').value.trim();$('man').open=true;$(bad).style.borderColor='var(--er)';$(bad).focus();return warn(miss?'⚠ FALTA LA GEORREFERENCIA: toque «REGISTRAR UBICACIÓN ACTUAL (GPS)» o ingrese Este, Norte y zona UTM. El registro NO se guardó.':'⚠ Georreferencia inválida: revise Este (100000 a 900000), Norte y zona UTM. El registro NO se guardó.')}
+const p=fromUTM(E,Nn,z,$('uh').value==='S'),la=p.lat,lo=p.lon;
+if(!$('poste').value.trim())return warn('⚠ Ingrese el número de poste.');
+
+const u=utm(la,lo),r={id:'r'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),t:Date.now(),poste:$('poste').value.trim(),lat:la,lon:lo,utm:fu(u),cat:cat,falla:cat==='redes'?$('redes').value:$('falla').value,mant:$('mant').value,tipo:cat==='redes'?'—':$('tipo').value,grupo:$('grupo').value.trim(),obs:$('obs').value.trim()};
+save(r);$('m1').style.cssText='color:var(--ok);font-weight:600';$('m1').textContent='Registro guardado ✔ — toque el GPS para la siguiente luminaria.';['ue','un','poste','obs'].forEach(i=>$(i).value='');updUTM();$('gpsinfo').textContent='Toque el botón estando junto a la luminaria para capturar su georreferencia.'};
+// ---------- Tabla ----------
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function render(){rows.sort((a,b)=>a.t-b.t);$('cnt').textContent=`(${rows.length} · ${rows.filter(r=>r.mant!=='Ejecutado').length} pendientes${shared?' · compartido':' · local'})`;
+$('tb').innerHTML=rows.map((r,i)=>`<tr data-r="${r.id}" style="cursor:pointer"><td>${i+1}</td><td>${esc(r.poste)}</td><td>${esc(r.utm)}</td><td>${esc(r.falla)}</td><td><span class="b" style="background:${r.mant==='Ejecutado'?'var(--ok)':'var(--er)'}">${r.mant}</span></td><td>${esc(r.tipo)}</td><td>${esc(r.grupo)}</td><td>${esc(r.obs)}</td><td><button type="button" class="s sm" data-e="${r.id}">✏ Editar</button> <a class="sm" style="display:inline-block;background:var(--ok);color:#fff;border-radius:8px;text-decoration:none;font-weight:600" href="https://www.google.com/maps/search/?api=1&query=${r.lat},${r.lon}" target="_blank" rel="noopener">🗺 Ver en Google Maps</a> <button type="button" class="sm" style="background:var(--er)" data-d="${r.id}">🗑 Borrar</button></td></tr>`).join('')||'<tr><td colspan="9" class="sub">Sin registros todavía.</td></tr>';
+drawMap()}
+$('tb').onclick=e=>{if(e.target.closest('a'))return;const b=e.target.closest('[data-d]');if(b){e.stopPropagation();return del(b.dataset.d)}
+const tr=e.target.closest('tr[data-r]');if(tr)openEd(tr.dataset.r)};
+function closeEd(){const d=$('ed');if(d)d.remove()}
+function openEd(id){const r=rows.find(x=>x.id===id);if(!r)return;const u=utm(r.lat,r.lon),opt=(s,v)=>[...$(s).options].map(o=>`<option${o.text===v?' selected':''}>${esc(o.text)}</option>`).join('');
+let d=$('ed');if(!d){d=document.createElement('div');d.id='ed';d.className='ed';document.body.appendChild(d)}
+d.innerHTML=`<div class="card"><h2>Editar registro</h2><label>Número de poste</label><input id="e_p" value="${esc(r.poste)}"><div class="g2"><div><label>Este (m)</label><input id="e_e" inputmode="decimal" value="${u.e.toFixed(1)}"></div><div><label>Norte (m)</label><input id="e_n" inputmode="decimal" value="${u.n.toFixed(1)}"></div></div><div class="g2"><div><label>Zona UTM</label><input id="e_z" inputmode="numeric" value="${u.z}"></div><div><label>Hemisferio</label><select id="e_h"><option value="S"${r.lat<0?' selected':''}>Sur</option><option value="N"${r.lat<0?'':' selected'}>Norte</option></select></div></div><label>${r.cat==='redes'?'Tipo de mantenimiento de redes':'Tipo de falla'}</label><select id="e_f">${opt(r.cat==='redes'?'redes':'falla',r.falla)}</select><label>Mantenimiento</label><select id="e_m">${opt('mant',r.mant)}</select>${r.cat==='redes'?'':`<label>Tipo de luminaria</label><select id="e_t">${opt('tipo',r.tipo)}</select>`}<label>Grupo que ejecutó el trabajo</label><input id="e_g" value="${esc(r.grupo)}"><label>Observación</label><textarea id="e_o" rows="3">${esc(r.obs)}</textarea><div class="row"><button type="button" id="e_s">Guardar cambios</button><button type="button" class="s" id="e_c">Cancelar</button></div><button type="button" id="e_d" style="background:var(--er);margin-top:8px">🗑 Eliminar registro</button><div class="msg" id="e_m2"></div></div>`;
+$('e_c').onclick=closeEd;$('e_d').onclick=()=>{closeEd();del(id)};
+$('e_s').onclick=()=>{const E=num($('e_e').value),Nn=num($('e_n').value),z=parseInt($('e_z').value,10),er=$('e_m2');er.style.color='var(--er)';
+if(!$('e_p').value.trim())return er.textContent='Falta el número de poste.';
+if(!(isFinite(E)&&E>1e5&&E<9e5&&isFinite(Nn)&&Nn>1e3&&Nn<1e7&&z>=1&&z<=60))return er.textContent='Georreferencia inválida: revise Este, Norte y zona UTM.';
+if($('e_m').value==='Ejecutado'&&!$('e_g').value.trim())return er.textContent='Indique el grupo que ejecutó el trabajo.';
+const p=fromUTM(E,Nn,z,$('e_h').value==='S');
+save({...r,poste:$('e_p').value.trim(),lat:p.lat,lon:p.lon,utm:fu(utm(p.lat,p.lon)),falla:$('e_f').value,mant:$('e_m').value,tipo:r.cat==='redes'?r.tipo:$('e_t').value,grupo:$('e_g').value.trim(),obs:$('e_o').value.trim()});closeEd()}}
+// ---------- Ruta ----------
+const R=6371.0088,rad=x=>x*Math.PI/180;
+const hav=(a,b)=>{const dl=rad(b.lat-a.lat),dn=rad(b.lon-a.lon),h=Math.sin(dl/2)**2+Math.cos(rad(a.lat))*Math.cos(rad(b.lat))*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.sqrt(h))};
+function plen(p){let s=0;for(let i=1;i<p.length;i++)s+=hav(p[i-1],p[i]);return s}
+function optimize(o,pts){// vecino más cercano + 2-opt (origen fijo, camino abierto)
+let rest=pts.slice(),path=[o];while(rest.length){const c=path[path.length-1];let bi=0,bd=1e9;rest.forEach((p,i)=>{const d=hav(c,p);if(d<bd){bd=d;bi=i}});path.push(rest.splice(bi,1)[0])}
+let imp=true,it=0;while(imp&&it++<60){imp=false;for(let i=1;i<path.length-1;i++)for(let j=i+1;j<path.length;j++){const n=path.slice(0,i).concat(path.slice(i,j+1).reverse(),path.slice(j+1));if(plen(n.concat([o]))<plen(path.concat([o]))-1e-9){path=n;imp=true}}}
+return path}
+const fmt=m=>{m=Math.round(m);return m>=60?Math.floor(m/60)+' h '+String(m%60).padStart(2,'0')+' min':m+' min'};
+function calc(origin){const pend=rows.filter(r=>r.mant!=='Ejecutado');if(!pend.length){$('m2').textContent='No hay luminarias pendientes.';route=[];start=origin;drawMap();return}
+const o={lat:origin.lat,lon:origin.lon,o:1},p=optimize(o,pend);route=p.slice(1);start=o;
+const fv=num($('fv').value)||1.3,v=num($('vel').value)||30,sv=num($('srv').value)||0,km=plen(p.concat([o]))*fv,tr=km/v*60;
+$('kd').textContent=km.toFixed(1)+' km';$('kt').textContent=fmt(tr);$('kc').textContent=fmt(tr+sv*route.length);
+const fe=p=>{const u=utm(p.lat,p.lon);return 'Este '+u.e.toFixed(1)+' · Norte '+u.n.toFixed(1)};
+$('orden').innerHTML='<li><b>Salida: Agencia CENTROSUR Biblián</b><br><span class="utm">'+fe(o)+'</span></li>'+route.map(r=>`<li>${esc(r.poste)} — ${esc(r.falla)} <span class="sub">(${esc(r.tipo)})</span><br><span class="utm">${fe(r)}</span></li>`).join('')+'<li><b>Regreso: Agencia CENTROSUR Biblián</b><br><span class="utm">'+fe(o)+'</span></li>';
+$('m2').textContent='Ruta cerrada: sale y regresa a la agencia. Distancia en línea recta × factor vial; el tiempo real depende del tráfico. Verifique con Google Maps, que muestra los puntos en latitud/longitud; el listado de arriba los da en UTM.';drawMap()}
+const AG_DEF={lat:-2.7167,lon:-78.8833};
+function agStored(){try{const a=JSON.parse(localStorage.getItem('lum_ag')||'null');return a&&isFinite(a.lat)&&isFinite(a.lon)?a:null}catch(e){return null}}
+function fillAg(){const s=agStored(),a=s||AG_DEF,u=utm(a.lat,a.lon);$('ae').value=u.e.toFixed(1);$('an').value=u.n.toFixed(1);$('am').textContent=s?'Coordenada de la agencia guardada.':'⚠ Coordenada APROXIMADA (centro de Biblián). Ingrese la exacta de la agencia y toque «Guardar partida».'}
+function agRead(){const E=num($('ae').value),N=num($('an').value);return(isFinite(E)&&isFinite(N)&&E>1e5&&E<9e5&&N>0&&N<1e7)?fromUTM(E,N,17,true):null}
+$('asv').onclick=()=>{const p=agRead();if(!p)return $('am').textContent='⚠ Coordenada inválida: revise Este y Norte (zona 17 Sur).';try{localStorage.setItem('lum_ag',JSON.stringify(p))}catch(e){}$('am').textContent='Coordenada de la agencia guardada ✔'};
+function tramoUrl(k){const C=23,S=route.slice(k*C,k*C+C);if(!S.length)return null;const last=(k+1)*C>=route.length,P=[k?route[k*C-1]:start].concat(S,last?[start]:[]);return 'https://www.google.com/maps/dir/'+P.map(p=>p.lat.toFixed(6)+','+p.lon.toFixed(6)).join('/')+'/data=!4m2!4m1!3e0'}
+function openTramo(k){const u=tramoUrl(k);if(!u)return;const a=document.createElement('a');a.href=u;a.target='_blank';a.rel='noopener';document.body.appendChild(a);a.click();a.remove()}
+function tramos(){const n=Math.ceil(route.length/23),st='display:block;text-align:center;background:var(--ok);color:#fff;border-radius:8px;text-decoration:none;font-weight:600;padding:12px;margin-top:8px';$('tramos').innerHTML=!n?'':Array.from({length:n},(_,k)=>`<a style="${st}" href="${tramoUrl(k).replace(/&/g,'&amp;')}" target="_blank" rel="noopener">🗺 ${n>1?'Tramo '+(k+1)+' de '+n+' · ':''}Ver ruta en Google Maps</a>`).join('')+(n>1?'<div class="msg">Google Maps admite hasta 25 puntos por enlace: abra cada tramo en orden.</div>':'')}
+$('tramos').onclick=e=>{const b=e.target.closest('[data-k]');if(b)openTramo(+b.dataset.k)};
+$('ruta').onclick=()=>{if(!rows.some(r=>r.mant!=='Ejecutado'))return $('m2').textContent='No hay luminarias pendientes.';const p=agRead()||agStored()||AG_DEF;calc({lat:p.lat,lon:p.lon});tramos();if(route.length)openTramo(0)};
+fillAg();permCheck();setupOut();
+// ---------- Mapa esquemático ----------
+function drawMap(){const s=$('map'),pts=rows.map(r=>({...r,u:utm(r.lat,r.lon)}));if(start)pts.push({lat:start.lat,lon:start.lon,u:utm(start.lat,start.lon),o:1});
+if(!pts.length){s.innerHTML='<text x="200" y="150" text-anchor="middle" fill="currentColor" font-size="12" opacity=".6">Sin puntos registrados</text>';return}
+const E=pts.map(p=>p.u.e),N=pts.map(p=>p.u.n),x0=Math.min(...E),x1=Math.max(...E),y0=Math.min(...N),y1=Math.max(...N),sp=Math.max(x1-x0,y1-y0,60),m=24,sc=(300-2*m)/sp;
+const X=p=>200+(p.u.e-(x0+x1)/2)*sc,Y=p=>150-(p.u.n-(y0+y1)/2)*sc;let h='';
+const path=start&&route.length?[start].concat(route,[start]):[];if(path.length>1){const q=path.map(p=>({u:utm(p.lat,p.lon)}));h+=`<polyline fill="none" stroke="var(--pr)" stroke-width="2" stroke-dasharray="5 3" points="${q.map(p=>X(p)+','+Y(p)).join(' ')}"/>`}
+pts.forEach(p=>{const c=p.o?'var(--pr)':p.mant==='Ejecutado'?'var(--ok)':'var(--er)',i=route.findIndex(r=>r.id===p.id);
+h+=`<circle cx="${X(p)}" cy="${Y(p)}" r="${p.o?7:5}" fill="${c}" stroke="#fff" stroke-width="1.5"/>`;if(i>=0)h+=`<text x="${X(p)+7}" y="${Y(p)-6}" font-size="10" fill="currentColor">${i+1}</text>`});
+h+=`<text x="8" y="292" font-size="9" fill="currentColor" opacity=".6">Escala ≈ ${Math.round(sp)} m por lado</text>`;s.innerHTML=h}
+// ---------- Exportar ----------
+function table(sep){const H=['N','Número de poste','Latitud','Longitud','UTM Este','UTM Norte','Zona UTM','Tipo de falla / mant. de red','Mantenimiento ejecutado','Tipo de luminaria','Grupo que ejecutó','Observación','Fecha'];
+const q=v=>sep===','?'"'+String(v).replace(/"/g,'""')+'"':String(v).replace(/[\t\n]/g,' ');
+return[H.map(q).join(sep)].concat(rows.map((r,i)=>{const u=utm(r.lat,r.lon);return[i+1,r.poste,r.lat.toFixed(6),r.lon.toFixed(6),u.e.toFixed(1),u.n.toFixed(1),u.z+u.b,r.falla,r.mant==='Ejecutado'?'Sí':'No',r.tipo,r.grupo,r.obs,new Date(r.t).toLocaleString('es-EC')].map(q).join(sep)})).join('\n')}
+$('csv').onclick=async()=>{if(!rows.length)return $('m3').textContent='No hay registros.';try{const bl=new Blob(['\ufeff'+table(',')],{type:'text/csv;charset=utf-8'}),a=document.createElement('a');a.href=URL.createObjectURL(bl);a.download='luminarias_en_falla.csv';document.body.appendChild(a);a.click();a.remove();$('m3').textContent='Archivo listo.'}catch(e){$('m3').textContent='Descarga no disponible aquí: use «Copiar para pegar en Sheets».'}};
+$('cp').onclick=async()=>{if(!rows.length)return $('m3').textContent='No hay registros.';const t=table('\t');try{await navigator.clipboard.writeText(t);$('m3').textContent='Copiado: pegue en la celda A1 de Google Sheets.'}catch(e){prompt('Copie este texto y péguelo en Sheets:',t)}};
+async function req(url,opt){let r;try{r=await fetch(url,opt)}catch(e){const x=new Error('red');x.detail=((e&&e.name)||'Error')+': '+((e&&e.message)||'');throw x}
+const t=await r.text();let j;try{j=JSON.parse(t)}catch(e){const x=new Error(r.status!==404&&/accounts\.google|sign in|iniciar sesi|acceso denegado|authoriz/i.test(t)?'acceso':'formato');x.detail='HTTP '+r.status+' · '+t.replace(/\s+/g,' ').slice(0,90);throw x}return j}
+function merge(srv){let m=srv.slice();outbox.forEach(o=>{if(o.op==='set'){const i=m.findIndex(x=>x.id===o.row.id);if(i<0)m.push(o.row);else m[i]=o.row}else m=m.filter(x=>x.id!==o.id)});return m}
+function setSt(ok,e){const was=shared;shared=ok;sync.ok=ok;const el=$('syncst');if(ok){el.style.color='var(--ok)';el.textContent='✔ Sincronizado '+new Date().toLocaleTimeString('es-EC')+(outbox.length?' · '+outbox.length+' por enviar':'')}
+else{const m=e&&e.message,pend=outbox.length?' ('+outbox.length+' por enviar)':'';el.style.color='var(--er)';
+if(m==='clave'){sync.bad=true;el.textContent='⚠ Clave de acceso incorrecta. Revise la clave y toque «Guardar y sincronizar».';$('cfgd').open=true}
+else if(m==='acceso')el.textContent='⚠ El enlace pide iniciar sesión en Google: la aplicación web no está abierta a «Cualquier persona». Avise al supervisor.'+pend;
+else if(m==='formato')el.textContent='⚠ El enlace no responde como la aplicación web (¿URL incompleta o incorrecta?). Revise que termine en /exec.'+pend;
+else if(m==='red')el.textContent='Sin conexión con la hoja o el navegador bloqueó la solicitud. Los cambios se guardan en este teléfono y se enviarán después'+pend+'. Si hay señal, abra la app desde Chrome o Safari, no desde WhatsApp.';
+else el.textContent='Sin conexión con la hoja. Los cambios se guardan en este teléfono y se enviarán al volver la señal'+pend+'.';
+$('syncdet').textContent='Detalle técnico: '+((e&&e.detail)||m||'?')+' · abierto desde '+location.protocol}
+if(ok)$('syncdet').textContent='';
+if(was!==ok)render()}
+function apply(srv){const m=merge(srv).sort((a,b)=>a.t-b.t),s=JSON.stringify(m.map(x=>[x.id,x.cat,x.poste,x.lat,x.lon,x.falla,x.mant,x.tipo,x.grupo,x.obs]));rows=m;persist();if(s!==sig){sig=s;render()}}
+async function flush(){if(!sync.on||sync.bad||sync.busy||!outbox.length)return;sync.busy=true;const sent=outbox.slice();try{const j=await req(sync.url,{method:'POST',body:JSON.stringify({key:sync.key,ops:sent}),redirect:'follow'});if(!j.ok)throw new Error(j.error||'error');outbox=outbox.filter(o=>!sent.some(s=>s.q===o.q));apply(j.rows);setSt(true)}catch(e){setSt(false,e)}sync.busy=false}
+async function poll(){if(!sync.on||sync.bad||sync.busy)return;if(outbox.length)return flush();sync.busy=true;try{const j=await req(sync.url+(sync.url.indexOf('?')>=0?'&':'?')+'key='+encodeURIComponent(sync.key),{redirect:'follow'});if(!j.ok)throw new Error(j.error||'error');apply(j.rows);setSt(true)}catch(e){setSt(false,e)}sync.busy=false}
+function cfgLoad(){let c={};try{c=JSON.parse(localStorage.getItem('lum_sync')||'{}')}catch(e){}sync.url=(c.url||SYNC_URL_DEF||'').trim();sync.key=(c.key||'').trim();sync.on=!!(sync.url&&sync.key);sync.bad=false;$('cu').value=sync.url;$('ck').value=sync.key}
+function startSync(){if(!sync.on)return;if(!timer){timer=setInterval(poll,8000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)poll()});window.addEventListener('online',()=>{poll()})}poll()}
+$('cs').onclick=()=>{const u=$('cu').value.trim(),k=$('ck').value.trim();if(!/^https:\/\/script\.google\.com\//.test(u))return $('syncst').textContent='⚠ El enlace debe empezar por https://script.google.com/…';if(!k)return $('syncst').textContent='⚠ Ingrese la clave de acceso.';
+try{localStorage.setItem('lum_sync',JSON.stringify({url:u,key:k}))}catch(e){}cfgLoad();
+if(rows.length&&!localStorage.getItem('lum_synced')){if(confirm('Este teléfono tiene '+rows.length+' registro(s) guardados localmente. ¿Subirlos a la hoja compartida?\n\nAceptar = subirlos · Cancelar = descartarlos y usar solo lo de la hoja')){rows.forEach(r=>outbox.push({op:'set',row:r,q:qid()}))}else{rows=[]}persist()}
+try{localStorage.setItem('lum_synced','1')}catch(e){}$('syncst').textContent='Conectando…';startSync()};
+// ---------- Inicio ----------
+try{rows=JSON.parse(localStorage.getItem(LS)||'[]')}catch(e){rows=[]}
+cfgLoad();render();
+if(sync.on){$('syncst').textContent='Conectando…';startSync()}else{$('cfgd').open=true;$('syncst').textContent=sync.url?'Ingrese la clave de acceso para sincronizar.':'Sin sincronizar: los registros se guardan solo en este teléfono.'}
+</script></body></html>
