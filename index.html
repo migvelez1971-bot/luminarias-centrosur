@@ -51,12 +51,21 @@ ol{padding-left:20px;margin:6px 0}a{color:var(--pr)}.msg{font-size:12px;color:va
 <div class="g2"><div><div id="wf"><label>Tipo de falla</label><select id="falla"><option>Apagada</option><option>Prendida de día</option><option>Intermitente / parpadea</option><option>Encendido parcial</option><option>Brazo o luminaria dañada</option><option>Sin energía en el circuito</option></select></div><div id="wr" style="display:none"><label>Tipo de mantenimiento de redes</label><select id="redes"><option>Calibración de tensor</option><option>Calibración de redes</option><option>Poda de vegetación</option><option>Mantenimiento de trafo</option><option>Otro</option></select></div></div>
 <div><label>Mantenimiento</label><select id="mant"><option>Pendiente</option><option>Ejecutado</option></select></div></div>
 <div class="g2"><div id="wt"><label>Tipo de luminaria</label><select id="tipo"><option>Sodio AP 70 W</option><option>Sodio AP 100 W</option><option>Sodio AP 150 W</option><option>Sodio AP 250 W</option><option>LED 30–60 W</option><option>LED 80–120 W</option><option>LED &gt; 120 W</option><option>Mercurio</option><option>Otro</option></select></div>
-<div id="wg"><label>Grupo que ejecutó el trabajo</label><input id="grupo" placeholder="Ej. Cuadrilla 3"></div></div>
+<div id="wg"><label>Grupo operativo</label><input id="grupo" list="dg" autocomplete="off" placeholder="Ej. 41A"></div></div>
 <label>Observación</label><textarea id="obs" rows="2"></textarea>
+<label>Fotografía (opcional)</label>
+<div class="row"><button type="button" class="s" id="fbtn">📷 Tomar foto</button><button type="button" class="s" id="fx" style="display:none">✖ Quitar foto</button></div>
+<input type="file" id="ffile" accept="image/*" capture="environment" style="display:none">
+<img id="fprev" alt="" style="display:none;max-width:100%;max-height:160px;border-radius:8px;margin-top:6px">
+<div class="msg" id="fmsg"></div>
 <div class="row"><button id="add" type="button">Guardar registro</button><button class="s" id="clr" type="button">Limpiar</button></div>
 <div class="msg" id="m1"></div></section>
 
 <section class="card"><h2>2. Mapa y ruta óptima</h2>
+<label>Grupo operativo (coincide con la columna «grupo» de la hoja)</label>
+<input id="rg" list="dg" autocomplete="off" autocapitalize="characters" placeholder="Ej. 41A — vacío = todas las pendientes">
+<label style="display:flex;align-items:center;gap:8px;margin-top:6px;font-weight:400"><input type="checkbox" id="rsg" checked style="width:auto;margin:0"> Incluir también las pendientes sin grupo asignado</label>
+<datalist id="dg"></datalist>
 <div class="sub" style="margin-bottom:4px"><b>Partida:</b> Agencia CENTROSUR Biblián</div>
 <div class="g3" style="align-items:end"><div><label>Este (m)</label><input id="ae" inputmode="decimal"></div><div><label>Norte (m)</label><input id="an" inputmode="decimal"></div><div><label>&nbsp;</label><button id="asv" type="button">Guardar partida</button></div></div>
 <div class="msg" id="am"></div>
@@ -83,7 +92,7 @@ let rows=[],start=null,route=[],db=null,shared=false,confDel=null,gpsBusy=false,
 const LS='lum_v1';
 // ---------- Sincronización con Google Sheets (vía Apps Script) ----------
 const SYNC_URL_DEF='https://script.google.com/macros/s/AKfycbzecyu6PIvhivup88MsTtDYjIgTakX-JC7O5ZPVKUoUEIedRaYRqT0whdgiq-ovFrxr/exec';
-let sync={url:'',key:'',on:false,busy:false,ok:false,bad:false},outbox=[],timer=null,sig='';
+let sync={url:'',key:'',on:false,busy:false,ok:false,bad:false,warn:''},outbox=[],timer=null,sig='';
 const OB='lum_outbox',qid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 try{outbox=JSON.parse(localStorage.getItem(OB)||'[]')}catch(e){outbox=[]}
 function persist(){try{localStorage.setItem(LS,JSON.stringify(rows));localStorage.setItem(OB,JSON.stringify(outbox))}catch(e){}}
@@ -116,14 +125,24 @@ $('gps').onclick=capGps;
 const autoGps=()=>{if(!autoTried&&!$('ue').value&&!$('un').value){autoTried=true;capGps()}};
 ['ue','un'].forEach(i=>$(i).addEventListener('focus',autoGps));
 $('man').querySelector('summary').addEventListener('click',autoGps);
+// ---------- Fotografías ----------
+let fotoData=null;
+function shrink(file,cb){const rd=new FileReader();rd.onload=()=>{const im=new Image();im.onload=()=>{const M=1024,k=Math.min(1,M/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.max(1,Math.round(im.width*k));c.height=Math.max(1,Math.round(im.height*k));c.getContext('2d').drawImage(im,0,0,c.width,c.height);cb(c.toDataURL('image/jpeg',0.65).split(',')[1])};im.onerror=()=>cb(null);im.src=rd.result};rd.onerror=()=>cb(null);rd.readAsDataURL(file)}
+function setFoto(b64){fotoData=b64;const im=$('fprev');if(b64){im.src='data:image/jpeg;base64,'+b64;im.style.display='block';$('fx').style.display='';$('fmsg').style.color='var(--ok)';$('fmsg').textContent='Foto lista ('+Math.round(b64.length*0.75/1024)+' KB). Se enviará al guardar el registro.'}else{im.removeAttribute('src');im.style.display='none';$('fx').style.display='none';$('fmsg').textContent=''}}
+function queueFoto(id,data){outbox=outbox.filter(o=>!(o.op==='foto'&&o.id===id));outbox.push({op:'foto',id:id,data:data,q:qid()});const x=rows.find(y=>y.id===id);if(x)x.fotoPend=true;persist();render();flush()}
+function fotoLink(r){return r.fotoid?`<a class="sm" style="display:inline-block;background:var(--pr);color:#fff;border-radius:8px;text-decoration:none;font-weight:600" href="${esc(r.foto)}" target="_blank" rel="noopener">📷 Ver foto</a> `:(r.fotoPend?'<span class="sub">⏳ foto por enviar </span>':'')}
+function fotoBlock(r){const th=r.fotoid?`<a href="${esc(r.foto)}" target="_blank" rel="noopener"><img src="https://drive.google.com/thumbnail?id=${esc(r.fotoid)}&sz=w600" alt="Foto" style="max-width:100%;max-height:200px;border-radius:8px;margin-top:6px"></a>`:'<div class="sub">Sin foto.</div>';return `<label>Fotografía</label>${th}${r.fotoPend?'<div class="msg">⏳ Foto por enviar.</div>':''}<div class="row"><button type="button" class="s" id="e_fb">📷 ${r.fotoid?'Cambiar foto':'Agregar foto'}</button></div><input type="file" id="e_ff" accept="image/*" capture="environment" style="display:none"><div class="msg" id="e_fm"></div>`}
+$('fbtn').onclick=()=>$('ffile').click();
+$('ffile').onchange=e=>{const f=e.target.files[0];e.target.value='';if(!f)return;$('fmsg').style.color='';$('fmsg').textContent='Procesando foto…';shrink(f,b=>{if(!b){$('fmsg').textContent='⚠ No se pudo leer la foto.';return}setFoto(b)})};
+$('fx').onclick=()=>setFoto(null);
 let cat='luminaria';
 function setCat(c){cat=c;const R=c==='redes';$('wf').style.display=R?'none':'';$('wr').style.display=R?'':'none';$('wt').style.display=R?'none':'';$('wg').style.gridColumn=R?'1/-1':'';$('cL').className=R?'s':'';$('cR').className=R?'':'s'}
 $('cL').onclick=()=>setCat('luminaria');$('cR').onclick=()=>setCat('redes');
-$('clr').onclick=()=>{['ue','un','poste','grupo','obs'].forEach(i=>$(i).value='');updUTM();$('gpsinfo').textContent='Toque el botón estando junto a la luminaria para capturar su georreferencia.'};
+$('clr').onclick=()=>{setFoto(null);['ue','un','poste','grupo','obs'].forEach(i=>$(i).value='');updUTM();$('gpsinfo').textContent='Toque el botón estando junto a la luminaria para capturar su georreferencia.'};
 function warn(t){const m=$('m1');m.style.cssText='color:#fff;background:var(--er);padding:8px;border-radius:8px;font-size:13px;font-weight:600';m.textContent=t;m.scrollIntoView({behavior:'smooth',block:'center'})}
 // ---------- Persistencia ----------
 function save(r){rows=rows.filter(x=>x.id!==r.id);rows.push(r);if(sync.on){outbox=outbox.filter(o=>!(o.op==='set'&&o.row.id===r.id));outbox.push({op:'set',row:r,q:qid()})}persist();render();flush()}
-function del(id){rows=rows.filter(x=>x.id!==id);if(sync.on){outbox=outbox.filter(o=>!(o.op==='set'&&o.row.id===id));outbox.push({op:'del',id:id,q:qid()})}persist();render();flush()}
+function del(id){rows=rows.filter(x=>x.id!==id);if(sync.on){outbox=outbox.filter(o=>!((o.op==='set'&&o.row.id===id)||(o.op==='foto'&&o.id===id)));outbox.push({op:'del',id:id,q:qid()})}persist();render();flush()}
 $('add').onclick=()=>{const E=num($('ue').value),Nn=num($('un').value),z=parseInt($('uz').value,10);
 const bad=!(isFinite(E)&&E>1e5&&E<9e5)?'ue':!(isFinite(Nn)&&Nn>1e3&&Nn<1e7)?'un':!(z>=1&&z<=60)?'uz':null;
 ['ue','un','uz'].forEach(i=>$(i).style.borderColor='');
@@ -132,18 +151,20 @@ const p=fromUTM(E,Nn,z,$('uh').value==='S'),la=p.lat,lo=p.lon;
 if(!$('poste').value.trim())return warn('⚠ Ingrese el número de poste.');
 
 const u=utm(la,lo),r={id:'r'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),t:Date.now(),poste:$('poste').value.trim(),lat:la,lon:lo,utm:fu(u),cat:cat,falla:cat==='redes'?$('redes').value:$('falla').value,mant:$('mant').value,tipo:cat==='redes'?'—':$('tipo').value,grupo:$('grupo').value.trim(),obs:$('obs').value.trim()};
-save(r);$('m1').style.cssText='color:var(--ok);font-weight:600';$('m1').textContent='Registro guardado ✔ — toque el GPS para la siguiente luminaria.';['ue','un','poste','obs'].forEach(i=>$(i).value='');updUTM();$('gpsinfo').textContent='Toque el botón estando junto a la luminaria para capturar su georreferencia.'};
+save(r);let fm='';if(fotoData){if(sync.on){queueFoto(r.id,fotoData)}else{fm=' ⚠ La foto NO se guardó: conecte la app a la hoja primero.'}setFoto(null)}$('m1').style.cssText='color:var(--ok);font-weight:600';$('m1').textContent='Registro guardado ✔ — toque el GPS para la siguiente luminaria.'+fm;['ue','un','poste','obs'].forEach(i=>$(i).value='');updUTM();$('gpsinfo').textContent='Toque el botón estando junto a la luminaria para capturar su georreferencia.'};
 // ---------- Tabla ----------
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-function render(){rows.sort((a,b)=>a.t-b.t);$('cnt').textContent=`(${rows.length} · ${rows.filter(r=>r.mant!=='Ejecutado').length} pendientes${shared?' · compartido':' · local'})`;
-$('tb').innerHTML=rows.map((r,i)=>`<tr data-r="${r.id}" style="cursor:pointer"><td>${i+1}</td><td>${esc(r.poste)}</td><td>${esc(r.utm)}</td><td>${esc(r.falla)}</td><td><span class="b" style="background:${r.mant==='Ejecutado'?'var(--ok)':'var(--er)'}">${r.mant}</span></td><td>${esc(r.tipo)}</td><td>${esc(r.grupo)}</td><td>${esc(r.obs)}</td><td><button type="button" class="s sm" data-e="${r.id}">✏ Editar</button> <a class="sm" style="display:inline-block;background:var(--ok);color:#fff;border-radius:8px;text-decoration:none;font-weight:600" href="https://www.google.com/maps/search/?api=1&query=${r.lat},${r.lon}" target="_blank" rel="noopener">🗺 Ver en Google Maps</a> <button type="button" class="sm" style="background:var(--er)" data-d="${r.id}">🗑 Borrar</button></td></tr>`).join('')||'<tr><td colspan="9" class="sub">Sin registros todavía.</td></tr>';
+function render(){rows.sort((a,b)=>a.t-b.t);grpLista();$('cnt').textContent=`(${rows.length} · ${rows.filter(r=>r.mant!=='Ejecutado').length} pendientes${shared?' · compartido':' · local'})`;
+$('tb').innerHTML=rows.map((r,i)=>`<tr data-r="${r.id}" style="cursor:pointer"><td>${i+1}</td><td>${esc(r.poste)}</td><td>${esc(r.utm)}</td><td>${esc(r.falla)}</td><td><span class="b" style="background:${r.mant==='Ejecutado'?'var(--ok)':'var(--er)'}">${r.mant}</span></td><td>${esc(r.tipo)}</td><td>${esc(r.grupo)}</td><td>${esc(r.obs)}</td><td>${fotoLink(r)}<button type="button" class="s sm" data-e="${r.id}">✏ Editar</button> <a class="sm" style="display:inline-block;background:var(--ok);color:#fff;border-radius:8px;text-decoration:none;font-weight:600" href="https://www.google.com/maps/search/?api=1&query=${r.lat},${r.lon}" target="_blank" rel="noopener">🗺 Ver en Google Maps</a> <button type="button" class="sm" style="background:var(--er)" data-d="${r.id}">🗑 Borrar</button></td></tr>`).join('')||'<tr><td colspan="9" class="sub">Sin registros todavía.</td></tr>';
 drawMap()}
 $('tb').onclick=e=>{if(e.target.closest('a'))return;const b=e.target.closest('[data-d]');if(b){e.stopPropagation();return del(b.dataset.d)}
 const tr=e.target.closest('tr[data-r]');if(tr)openEd(tr.dataset.r)};
 function closeEd(){const d=$('ed');if(d)d.remove()}
 function openEd(id){const r=rows.find(x=>x.id===id);if(!r)return;const u=utm(r.lat,r.lon),opt=(s,v)=>[...$(s).options].map(o=>`<option${o.text===v?' selected':''}>${esc(o.text)}</option>`).join('');
 let d=$('ed');if(!d){d=document.createElement('div');d.id='ed';d.className='ed';document.body.appendChild(d)}
-d.innerHTML=`<div class="card"><h2>Editar registro</h2><label>Número de poste</label><input id="e_p" value="${esc(r.poste)}"><div class="g2"><div><label>Este (m)</label><input id="e_e" inputmode="decimal" value="${u.e.toFixed(1)}"></div><div><label>Norte (m)</label><input id="e_n" inputmode="decimal" value="${u.n.toFixed(1)}"></div></div><div class="g2"><div><label>Zona UTM</label><input id="e_z" inputmode="numeric" value="${u.z}"></div><div><label>Hemisferio</label><select id="e_h"><option value="S"${r.lat<0?' selected':''}>Sur</option><option value="N"${r.lat<0?'':' selected'}>Norte</option></select></div></div><label>${r.cat==='redes'?'Tipo de mantenimiento de redes':'Tipo de falla'}</label><select id="e_f">${opt(r.cat==='redes'?'redes':'falla',r.falla)}</select><label>Mantenimiento</label><select id="e_m">${opt('mant',r.mant)}</select>${r.cat==='redes'?'':`<label>Tipo de luminaria</label><select id="e_t">${opt('tipo',r.tipo)}</select>`}<label>Grupo que ejecutó el trabajo</label><input id="e_g" value="${esc(r.grupo)}"><label>Observación</label><textarea id="e_o" rows="3">${esc(r.obs)}</textarea><div class="row"><button type="button" id="e_s">Guardar cambios</button><button type="button" class="s" id="e_c">Cancelar</button></div><button type="button" id="e_d" style="background:var(--er);margin-top:8px">🗑 Eliminar registro</button><div class="msg" id="e_m2"></div></div>`;
+d.innerHTML=`<div class="card"><h2>Editar registro</h2><label>Número de poste</label><input id="e_p" value="${esc(r.poste)}"><div class="g2"><div><label>Este (m)</label><input id="e_e" inputmode="decimal" value="${u.e.toFixed(1)}"></div><div><label>Norte (m)</label><input id="e_n" inputmode="decimal" value="${u.n.toFixed(1)}"></div></div><div class="g2"><div><label>Zona UTM</label><input id="e_z" inputmode="numeric" value="${u.z}"></div><div><label>Hemisferio</label><select id="e_h"><option value="S"${r.lat<0?' selected':''}>Sur</option><option value="N"${r.lat<0?'':' selected'}>Norte</option></select></div></div><label>${r.cat==='redes'?'Tipo de mantenimiento de redes':'Tipo de falla'}</label><select id="e_f">${opt(r.cat==='redes'?'redes':'falla',r.falla)}</select><label>Mantenimiento</label><select id="e_m">${opt('mant',r.mant)}</select>${r.cat==='redes'?'':`<label>Tipo de luminaria</label><select id="e_t">${opt('tipo',r.tipo)}</select>`}<label>Grupo operativo</label><input id="e_g" list="dg" autocomplete="off" value="${esc(r.grupo)}"><label>Observación</label><textarea id="e_o" rows="3">${esc(r.obs)}</textarea>${fotoBlock(r)}<div class="row"><button type="button" id="e_s">Guardar cambios</button><button type="button" class="s" id="e_c">Cancelar</button></div><button type="button" id="e_d" style="background:var(--er);margin-top:8px">🗑 Eliminar registro</button><div class="msg" id="e_m2"></div></div>`;
+$('e_fb').onclick=()=>$('e_ff').click();
+$('e_ff').onchange=e=>{const f=e.target.files[0];e.target.value='';if(!f)return;const m=$('e_fm');if(!sync.on){m.style.color='var(--er)';m.textContent='⚠ Conecte la app a la hoja para guardar fotos.';return}m.style.color='';m.textContent='Procesando foto…';shrink(f,b=>{if(!b){m.style.color='var(--er)';m.textContent='⚠ No se pudo leer la foto.';return}queueFoto(id,b);m.style.color='var(--ok)';m.textContent='Foto en cola ✔: se enviará en unos segundos.'})};
 $('e_c').onclick=closeEd;$('e_d').onclick=()=>{closeEd();del(id)};
 $('e_s').onclick=()=>{const E=num($('e_e').value),Nn=num($('e_n').value),z=parseInt($('e_z').value,10),er=$('e_m2');er.style.color='var(--er)';
 if(!$('e_p').value.trim())return er.textContent='Falta el número de poste.';
@@ -152,6 +173,14 @@ if($('e_m').value==='Ejecutado'&&!$('e_g').value.trim())return er.textContent='I
 const p=fromUTM(E,Nn,z,$('e_h').value==='S');
 save({...r,poste:$('e_p').value.trim(),lat:p.lat,lon:p.lon,utm:fu(utm(p.lat,p.lon)),falla:$('e_f').value,mant:$('e_m').value,tipo:r.cat==='redes'?r.tipo:$('e_t').value,grupo:$('e_g').value.trim(),obs:$('e_o').value.trim()});closeEd()}}
 // ---------- Ruta ----------
+const ng=s=>String(s||'').trim().toLowerCase().replace(/\s+/g,'');
+function pendGrupo(){const g=ng($('rg').value),inc=$('rsg').checked;return rows.filter(r=>r.mant!=='Ejecutado'&&(!g||ng(r.grupo)===g||(inc&&!ng(r.grupo))))}
+function grpGuardar(){try{localStorage.setItem('lum_grupo',$('rg').value.trim());localStorage.setItem('lum_rsg',$('rsg').checked?'1':'0')}catch(e){}}
+$('rg').oninput=()=>{grpGuardar();const f=$('grupo');if(!f.value.trim()||f.dataset.auto==='1'){f.value=$('rg').value.trim();f.dataset.auto='1'}};
+$('grupo').addEventListener('input',()=>{$('grupo').dataset.auto='0'});
+$('rsg').onchange=grpGuardar;
+function grpInit(){try{$('rg').value=localStorage.getItem('lum_grupo')||'';$('rsg').checked=localStorage.getItem('lum_rsg')!=='0'}catch(e){}if($('rg').value&&!$('grupo').value.trim()){$('grupo').value=$('rg').value;$('grupo').dataset.auto='1'}}
+function grpLista(){$('dg').innerHTML=[...new Set(rows.map(r=>String(r.grupo||'').trim()).filter(Boolean))].sort().map(g=>`<option value="${esc(g)}">`).join('')}
 const R=6371.0088,rad=x=>x*Math.PI/180;
 const hav=(a,b)=>{const dl=rad(b.lat-a.lat),dn=rad(b.lon-a.lon),h=Math.sin(dl/2)**2+Math.cos(rad(a.lat))*Math.cos(rad(b.lat))*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.sqrt(h))};
 function plen(p){let s=0;for(let i=1;i<p.length;i++)s+=hav(p[i-1],p[i]);return s}
@@ -160,13 +189,13 @@ let rest=pts.slice(),path=[o];while(rest.length){const c=path[path.length-1];let
 let imp=true,it=0;while(imp&&it++<60){imp=false;for(let i=1;i<path.length-1;i++)for(let j=i+1;j<path.length;j++){const n=path.slice(0,i).concat(path.slice(i,j+1).reverse(),path.slice(j+1));if(plen(n.concat([o]))<plen(path.concat([o]))-1e-9){path=n;imp=true}}}
 return path}
 const fmt=m=>{m=Math.round(m);return m>=60?Math.floor(m/60)+' h '+String(m%60).padStart(2,'0')+' min':m+' min'};
-function calc(origin){const pend=rows.filter(r=>r.mant!=='Ejecutado');if(!pend.length){$('m2').textContent='No hay luminarias pendientes.';route=[];start=origin;drawMap();return}
+function calc(origin){const pend=pendGrupo(),G=$('rg').value.trim();if(!pend.length){$('m2').textContent='No hay actividades pendientes'+(G?' para el grupo '+G:'')+'.';route=[];start=origin;drawMap();return}
 const o={lat:origin.lat,lon:origin.lon,o:1},p=optimize(o,pend);route=p.slice(1);start=o;
 const fv=num($('fv').value)||1.3,v=num($('vel').value)||30,sv=num($('srv').value)||0,km=plen(p.concat([o]))*fv,tr=km/v*60;
 $('kd').textContent=km.toFixed(1)+' km';$('kt').textContent=fmt(tr);$('kc').textContent=fmt(tr+sv*route.length);
 const fe=p=>{const u=utm(p.lat,p.lon);return 'Este '+u.e.toFixed(1)+' · Norte '+u.n.toFixed(1)};
-$('orden').innerHTML='<li><b>Salida: Agencia CENTROSUR Biblián</b><br><span class="utm">'+fe(o)+'</span></li>'+route.map(r=>`<li>${esc(r.poste)} — ${esc(r.falla)} <span class="sub">(${esc(r.tipo)})</span><br><span class="utm">${fe(r)}</span></li>`).join('')+'<li><b>Regreso: Agencia CENTROSUR Biblián</b><br><span class="utm">'+fe(o)+'</span></li>';
-$('m2').textContent='Ruta cerrada: sale y regresa a la agencia. Distancia en línea recta × factor vial; el tiempo real depende del tráfico. Verifique con Google Maps, que muestra los puntos en latitud/longitud; el listado de arriba los da en UTM.';drawMap()}
+$('orden').innerHTML='<li><b>Salida: Agencia CENTROSUR Biblián</b><br><span class="utm">'+fe(o)+'</span></li>'+route.map(r=>`<li>${esc(r.poste)} — ${esc(r.falla)} <span class="sub">(${esc(r.tipo)})</span>${r.grupo?' · <b>'+esc(r.grupo)+'</b>':''}${r.obs?'<br><span class="sub">'+esc(r.obs)+'</span>':''}<br><span class="utm">${fe(r)}</span>${r.fotoid?' <a href="'+esc(r.foto)+'" target="_blank" rel="noopener">📷 Ver foto</a>':''}</li>`).join('')+'<li><b>Regreso: Agencia CENTROSUR Biblián</b><br><span class="utm">'+fe(o)+'</span></li>';
+const asg=G?pend.filter(r=>ng(r.grupo)===ng(G)).length:0;$('m2').textContent=(G?'Ruta del grupo '+G+': '+pend.length+' actividad(es) ('+asg+' asignada(s) + '+(pend.length-asg)+' sin grupo). ':'Ruta de todas las pendientes ('+pend.length+'). ')+'Ruta cerrada: sale y regresa a la agencia. Distancia en línea recta × factor vial; el tiempo real depende del tráfico. Verifique con Google Maps, que muestra los puntos en latitud/longitud; el listado de arriba los da en UTM.';drawMap()}
 const AG_DEF={lat:-2.7167,lon:-78.8833};
 function agStored(){try{const a=JSON.parse(localStorage.getItem('lum_ag')||'null');return a&&isFinite(a.lat)&&isFinite(a.lon)?a:null}catch(e){return null}}
 function fillAg(){const s=agStored(),a=s||AG_DEF,u=utm(a.lat,a.lon);$('ae').value=u.e.toFixed(1);$('an').value=u.n.toFixed(1);$('am').textContent=s?'Coordenada de la agencia guardada.':'⚠ Coordenada APROXIMADA (centro de Biblián). Ingrese la exacta de la agencia y toque «Guardar partida».'}
@@ -176,7 +205,7 @@ function tramoUrl(k){const C=23,S=route.slice(k*C,k*C+C);if(!S.length)return nul
 function openTramo(k){const u=tramoUrl(k);if(!u)return;const a=document.createElement('a');a.href=u;a.target='_blank';a.rel='noopener';document.body.appendChild(a);a.click();a.remove()}
 function tramos(){const n=Math.ceil(route.length/23),st='display:block;text-align:center;background:var(--ok);color:#fff;border-radius:8px;text-decoration:none;font-weight:600;padding:12px;margin-top:8px';$('tramos').innerHTML=!n?'':Array.from({length:n},(_,k)=>`<a style="${st}" href="${tramoUrl(k).replace(/&/g,'&amp;')}" target="_blank" rel="noopener">🗺 ${n>1?'Tramo '+(k+1)+' de '+n+' · ':''}Ver ruta en Google Maps</a>`).join('')+(n>1?'<div class="msg">Google Maps admite hasta 25 puntos por enlace: abra cada tramo en orden.</div>':'')}
 $('tramos').onclick=e=>{const b=e.target.closest('[data-k]');if(b)openTramo(+b.dataset.k)};
-$('ruta').onclick=()=>{if(!rows.some(r=>r.mant!=='Ejecutado'))return $('m2').textContent='No hay luminarias pendientes.';const p=agRead()||agStored()||AG_DEF;calc({lat:p.lat,lon:p.lon});tramos();if(route.length)openTramo(0)};
+$('ruta').onclick=()=>{if(!pendGrupo().length)return $('m2').textContent='No hay actividades pendientes'+($('rg').value.trim()?' para el grupo '+$('rg').value.trim():'')+'.';const p=agRead()||agStored()||AG_DEF;calc({lat:p.lat,lon:p.lon});tramos();if(route.length)openTramo(0)};
 fillAg();permCheck();setupOut();
 // ---------- Mapa esquemático ----------
 function drawMap(){const s=$('map'),pts=rows.map(r=>({...r,u:utm(r.lat,r.lon)}));if(start)pts.push({lat:start.lat,lon:start.lon,u:utm(start.lat,start.lon),o:1});
@@ -188,15 +217,15 @@ pts.forEach(p=>{const c=p.o?'var(--pr)':p.mant==='Ejecutado'?'var(--ok)':'var(--
 h+=`<circle cx="${X(p)}" cy="${Y(p)}" r="${p.o?7:5}" fill="${c}" stroke="#fff" stroke-width="1.5"/>`;if(i>=0)h+=`<text x="${X(p)+7}" y="${Y(p)-6}" font-size="10" fill="currentColor">${i+1}</text>`});
 h+=`<text x="8" y="292" font-size="9" fill="currentColor" opacity=".6">Escala ≈ ${Math.round(sp)} m por lado</text>`;s.innerHTML=h}
 // ---------- Exportar ----------
-function table(sep){const H=['N','Número de poste','Latitud','Longitud','UTM Este','UTM Norte','Zona UTM','Tipo de falla / mant. de red','Mantenimiento ejecutado','Tipo de luminaria','Grupo que ejecutó','Observación','Fecha'];
+function table(sep){const H=['N','Número de poste','Latitud','Longitud','UTM Este','UTM Norte','Zona UTM','Tipo de falla / mant. de red','Mantenimiento ejecutado','Tipo de luminaria','Grupo operativo','Observación','Fecha'];
 const q=v=>sep===','?'"'+String(v).replace(/"/g,'""')+'"':String(v).replace(/[\t\n]/g,' ');
 return[H.map(q).join(sep)].concat(rows.map((r,i)=>{const u=utm(r.lat,r.lon);return[i+1,r.poste,r.lat.toFixed(6),r.lon.toFixed(6),u.e.toFixed(1),u.n.toFixed(1),u.z+u.b,r.falla,r.mant==='Ejecutado'?'Sí':'No',r.tipo,r.grupo,r.obs,new Date(r.t).toLocaleString('es-EC')].map(q).join(sep)})).join('\n')}
 $('csv').onclick=async()=>{if(!rows.length)return $('m3').textContent='No hay registros.';try{const bl=new Blob(['\ufeff'+table(',')],{type:'text/csv;charset=utf-8'}),a=document.createElement('a');a.href=URL.createObjectURL(bl);a.download='luminarias_en_falla.csv';document.body.appendChild(a);a.click();a.remove();$('m3').textContent='Archivo listo.'}catch(e){$('m3').textContent='Descarga no disponible aquí: use «Copiar para pegar en Sheets».'}};
 $('cp').onclick=async()=>{if(!rows.length)return $('m3').textContent='No hay registros.';const t=table('\t');try{await navigator.clipboard.writeText(t);$('m3').textContent='Copiado: pegue en la celda A1 de Google Sheets.'}catch(e){prompt('Copie este texto y péguelo en Sheets:',t)}};
 async function req(url,opt){let r;try{r=await fetch(url,opt)}catch(e){const x=new Error('red');x.detail=((e&&e.name)||'Error')+': '+((e&&e.message)||'');throw x}
 const t=await r.text();let j;try{j=JSON.parse(t)}catch(e){const x=new Error(r.status!==404&&/accounts\.google|sign in|iniciar sesi|acceso denegado|authoriz/i.test(t)?'acceso':'formato');x.detail='HTTP '+r.status+' · '+t.replace(/\s+/g,' ').slice(0,90);throw x}return j}
-function merge(srv){let m=srv.slice();outbox.forEach(o=>{if(o.op==='set'){const i=m.findIndex(x=>x.id===o.row.id);if(i<0)m.push(o.row);else m[i]=o.row}else m=m.filter(x=>x.id!==o.id)});return m}
-function setSt(ok,e){const was=shared;shared=ok;sync.ok=ok;const el=$('syncst');if(ok){el.style.color='var(--ok)';el.textContent='✔ Sincronizado '+new Date().toLocaleTimeString('es-EC')+(outbox.length?' · '+outbox.length+' por enviar':'')}
+function merge(srv){let m=srv.map(x=>Object.assign({},x));outbox.forEach(o=>{if(o.op==='set'){const i=m.findIndex(x=>x.id===o.row.id);if(i<0)m.push(Object.assign({},o.row));else m[i]=Object.assign({},o.row,{foto:m[i].foto,fotoid:m[i].fotoid})}else if(o.op==='del')m=m.filter(x=>x.id!==o.id)});outbox.forEach(o=>{if(o.op==='foto'){const x=m.find(y=>y.id===o.id);if(x)x.fotoPend=true}});return m}
+function setSt(ok,e){const was=shared;shared=ok;sync.ok=ok;const el=$('syncst');if(ok){el.style.color='var(--ok)';el.textContent='✔ Sincronizado '+new Date().toLocaleTimeString('es-EC')+(outbox.length?' · '+outbox.length+' por enviar':'')+(sync.warn?' · ⚠ Aviso de la hoja: '+sync.warn:'')}
 else{const m=e&&e.message,pend=outbox.length?' ('+outbox.length+' por enviar)':'';el.style.color='var(--er)';
 if(m==='clave'){sync.bad=true;el.textContent='⚠ Clave de acceso incorrecta. Revise la clave y toque «Guardar y sincronizar».';$('cfgd').open=true}
 else if(m==='acceso')el.textContent='⚠ El enlace pide iniciar sesión en Google: la aplicación web no está abierta a «Cualquier persona». Avise al supervisor.'+pend;
@@ -206,8 +235,8 @@ else el.textContent='Sin conexión con la hoja. Los cambios se guardan en este t
 $('syncdet').textContent='Detalle técnico: '+((e&&e.detail)||m||'?')+' · abierto desde '+location.protocol}
 if(ok)$('syncdet').textContent='';
 if(was!==ok)render()}
-function apply(srv){const m=merge(srv).sort((a,b)=>a.t-b.t),s=JSON.stringify(m.map(x=>[x.id,x.cat,x.poste,x.lat,x.lon,x.falla,x.mant,x.tipo,x.grupo,x.obs]));rows=m;persist();if(s!==sig){sig=s;render()}}
-async function flush(){if(!sync.on||sync.bad||sync.busy||!outbox.length)return;sync.busy=true;const sent=outbox.slice();try{const j=await req(sync.url,{method:'POST',body:JSON.stringify({key:sync.key,ops:sent}),redirect:'follow'});if(!j.ok)throw new Error(j.error||'error');outbox=outbox.filter(o=>!sent.some(s=>s.q===o.q));apply(j.rows);setSt(true);if(j.errs&&j.errs.length)$('syncdet').textContent='Aviso de la hoja: '+j.errs[0]}catch(e){setSt(false,e)}sync.busy=false}
+function apply(srv){const m=merge(srv).sort((a,b)=>a.t-b.t),s=JSON.stringify(m.map(x=>[x.id,x.cat,x.poste,x.lat,x.lon,x.falla,x.mant,x.tipo,x.grupo,x.obs,x.fotoid,x.fotoPend]));rows=m;persist();if(s!==sig){sig=s;render()}}
+async function flush(){if(!sync.on||sync.bad||sync.busy||!outbox.length)return;sync.busy=true;const nf=outbox.filter(o=>o.op!=='foto'),sent=nf.length?nf:outbox.slice(0,1);let more=false;try{const j=await req(sync.url,{method:'POST',body:JSON.stringify({key:sync.key,ops:sent}),redirect:'follow'});if(!j.ok)throw new Error(j.error||'error');outbox=outbox.filter(o=>!sent.some(s=>s.q===o.q));sync.warn=(j.errs&&j.errs.length)?j.errs[0]:'';apply(j.rows);setSt(true);more=outbox.length>0}catch(e){setSt(false,e)}sync.busy=false;if(more)flush()}
 function firstConnect(){if(localStorage.getItem('lum_synced'))return;
 if(rows.length&&confirm('Este navegador tiene '+rows.length+' registro(s) guardados solo en este teléfono y que no están en la hoja.\n\n¿Subirlos a la hoja compartida?\n\nAceptar = subirlos · Cancelar = descartarlos y usar solo lo de la hoja')){rows.forEach(r=>outbox.push({op:'set',row:r,q:qid()}))}
 try{localStorage.setItem('lum_synced','1')}catch(e){}}
@@ -218,13 +247,13 @@ $('cs').onclick=()=>{const u=$('cu').value.trim(),k=$('ck').value.trim();if(!/^h
 try{localStorage.setItem('lum_sync',JSON.stringify({url:u,key:k}))}catch(e){}cfgLoad();
 $('syncst').textContent='Conectando…';startSync()};
 function bar(){const t=$('sbarT'),s=$('syncst'),txt=s.textContent||'Sin sincronizar';t.textContent=txt;
-t.style.color=sync.ok?'var(--ok)':((sync.on&&!sync.bad&&!/⚠|Sin conexión/.test(txt))?'var(--mu)':'var(--er)');
+t.style.color=/⚠|Sin conexión/.test(txt)?'var(--er)':(sync.ok?'var(--ok)':((sync.on&&!sync.bad)?'var(--mu)':'var(--er)'));
 $('sbarK').style.display=((sync.url&&!sync.key)||sync.bad)?'':'none';$('sn').style.display=(sync.on&&!sync.bad)?'':'none'}
 new MutationObserver(bar).observe($('syncst'),{childList:true,characterData:true,subtree:true});
 $('skb').onclick=()=>{$('ck').value=$('sk').value;$('cs').click()};
 $('sn').onclick=()=>{$('syncst').textContent='Conectando…';sync.bad=false;poll()};
 // ---------- Inicio ----------
 try{rows=JSON.parse(localStorage.getItem(LS)||'[]')}catch(e){rows=[]}
-cfgLoad();render();
+cfgLoad();grpInit();render();
 if(sync.on){$('syncst').textContent='Conectando…';startSync()}else{$('syncst').textContent=sync.url?'Ingrese la clave de acceso para sincronizar.':'Sin sincronizar: los registros se guardan solo en este teléfono.'}
 </script></body></html>
