@@ -27,6 +27,10 @@ ol{padding-left:20px;margin:6px 0}a{color:var(--pr)}.msg{font-size:12px;color:va
 .sm{width:auto;padding:5px 9px;font-size:12px;margin:0 2px}.ed{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:20;overflow:auto;padding:max(12px,env(safe-area-inset-top,0px)) 12px 24px}.ed .card{max-width:520px;margin:20px auto}
 </style></head><body>
 <header><h1>💡 Registro de luminarias en falla y novedades para mantenimiento</h1><div class="sub">By Migvelez</div></header>
+<div id="sbar" style="margin:8px 14px 0;padding:9px 10px;border:1px solid var(--bd);border-radius:10px;background:var(--card);font-size:13px">
+<div id="sbarT" style="font-weight:600">Sin sincronizar</div>
+<div id="sbarK" class="g2" style="display:none;margin-top:8px"><input id="sk" type="password" autocapitalize="off" autocomplete="off" placeholder="Clave de acceso"><button id="skb" type="button">Conectar</button></div>
+<button id="sn" type="button" class="s" style="display:none;margin-top:8px">🔄 Sincronizar ahora</button></div>
 <main>
 <section class="card"><h2>1. Registrar luminaria o novedad</h2>
 <div class="g2" style="margin-bottom:10px"><button type="button" id="cL">💡 Luminaria</button><button type="button" class="s" id="cR">🔧 Mantenimiento de redes</button></div>
@@ -203,16 +207,24 @@ $('syncdet').textContent='Detalle técnico: '+((e&&e.detail)||m||'?')+' · abier
 if(ok)$('syncdet').textContent='';
 if(was!==ok)render()}
 function apply(srv){const m=merge(srv).sort((a,b)=>a.t-b.t),s=JSON.stringify(m.map(x=>[x.id,x.cat,x.poste,x.lat,x.lon,x.falla,x.mant,x.tipo,x.grupo,x.obs]));rows=m;persist();if(s!==sig){sig=s;render()}}
-async function flush(){if(!sync.on||sync.bad||sync.busy||!outbox.length)return;sync.busy=true;const sent=outbox.slice();try{const j=await req(sync.url,{method:'POST',body:JSON.stringify({key:sync.key,ops:sent}),redirect:'follow'});if(!j.ok)throw new Error(j.error||'error');outbox=outbox.filter(o=>!sent.some(s=>s.q===o.q));apply(j.rows);setSt(true)}catch(e){setSt(false,e)}sync.busy=false}
-async function poll(){if(!sync.on||sync.bad||sync.busy)return;if(outbox.length)return flush();sync.busy=true;try{const j=await req(sync.url+(sync.url.indexOf('?')>=0?'&':'?')+'key='+encodeURIComponent(sync.key),{redirect:'follow'});if(!j.ok)throw new Error(j.error||'error');apply(j.rows);setSt(true)}catch(e){setSt(false,e)}sync.busy=false}
+async function flush(){if(!sync.on||sync.bad||sync.busy||!outbox.length)return;sync.busy=true;const sent=outbox.slice();try{const j=await req(sync.url,{method:'POST',body:JSON.stringify({key:sync.key,ops:sent}),redirect:'follow'});if(!j.ok)throw new Error(j.error||'error');outbox=outbox.filter(o=>!sent.some(s=>s.q===o.q));apply(j.rows);setSt(true);if(j.errs&&j.errs.length)$('syncdet').textContent='Aviso de la hoja: '+j.errs[0]}catch(e){setSt(false,e)}sync.busy=false}
+function firstConnect(){if(localStorage.getItem('lum_synced'))return;
+if(rows.length&&confirm('Este navegador tiene '+rows.length+' registro(s) guardados solo en este teléfono y que no están en la hoja.\n\n¿Subirlos a la hoja compartida?\n\nAceptar = subirlos · Cancelar = descartarlos y usar solo lo de la hoja')){rows.forEach(r=>outbox.push({op:'set',row:r,q:qid()}))}
+try{localStorage.setItem('lum_synced','1')}catch(e){}}
+async function poll(){if(!sync.on||sync.bad||sync.busy)return;if(outbox.length)return flush();sync.busy=true;try{const j=await req(sync.url+(sync.url.indexOf('?')>=0?'&':'?')+'key='+encodeURIComponent(sync.key),{redirect:'follow'});if(!j.ok)throw new Error(j.error||'error');firstConnect();apply(j.rows);setSt(true)}catch(e){setSt(false,e)}sync.busy=false;if(outbox.length)flush()}
 function cfgLoad(){let c={};try{c=JSON.parse(localStorage.getItem('lum_sync')||'{}')}catch(e){}sync.url=(c.url||SYNC_URL_DEF||'').trim();sync.key=(c.key||'').trim();sync.on=!!(sync.url&&sync.key);sync.bad=false;$('cu').value=sync.url;$('ck').value=sync.key}
 function startSync(){if(!sync.on)return;if(!timer){timer=setInterval(poll,8000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)poll()});window.addEventListener('online',()=>{poll()})}poll()}
 $('cs').onclick=()=>{const u=$('cu').value.trim(),k=$('ck').value.trim();if(!/^https:\/\/script\.google\.com\//.test(u))return $('syncst').textContent='⚠ El enlace debe empezar por https://script.google.com/…';if(!k)return $('syncst').textContent='⚠ Ingrese la clave de acceso.';
 try{localStorage.setItem('lum_sync',JSON.stringify({url:u,key:k}))}catch(e){}cfgLoad();
-if(rows.length&&!localStorage.getItem('lum_synced')){if(confirm('Este teléfono tiene '+rows.length+' registro(s) guardados localmente. ¿Subirlos a la hoja compartida?\n\nAceptar = subirlos · Cancelar = descartarlos y usar solo lo de la hoja')){rows.forEach(r=>outbox.push({op:'set',row:r,q:qid()}))}else{rows=[]}persist()}
-try{localStorage.setItem('lum_synced','1')}catch(e){}$('syncst').textContent='Conectando…';startSync()};
+$('syncst').textContent='Conectando…';startSync()};
+function bar(){const t=$('sbarT'),s=$('syncst'),txt=s.textContent||'Sin sincronizar';t.textContent=txt;
+t.style.color=sync.ok?'var(--ok)':((sync.on&&!sync.bad&&!/⚠|Sin conexión/.test(txt))?'var(--mu)':'var(--er)');
+$('sbarK').style.display=((sync.url&&!sync.key)||sync.bad)?'':'none';$('sn').style.display=(sync.on&&!sync.bad)?'':'none'}
+new MutationObserver(bar).observe($('syncst'),{childList:true,characterData:true,subtree:true});
+$('skb').onclick=()=>{$('ck').value=$('sk').value;$('cs').click()};
+$('sn').onclick=()=>{$('syncst').textContent='Conectando…';sync.bad=false;poll()};
 // ---------- Inicio ----------
 try{rows=JSON.parse(localStorage.getItem(LS)||'[]')}catch(e){rows=[]}
 cfgLoad();render();
-if(sync.on){$('syncst').textContent='Conectando…';startSync()}else{$('cfgd').open=true;$('syncst').textContent=sync.url?'Ingrese la clave de acceso para sincronizar.':'Sin sincronizar: los registros se guardan solo en este teléfono.'}
+if(sync.on){$('syncst').textContent='Conectando…';startSync()}else{$('syncst').textContent=sync.url?'Ingrese la clave de acceso para sincronizar.':'Sin sincronizar: los registros se guardan solo en este teléfono.'}
 </script></body></html>
