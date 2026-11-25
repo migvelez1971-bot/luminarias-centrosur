@@ -22,7 +22,7 @@ th,td{border-bottom:1px solid var(--bd);padding:6px;text-align:left;white-space:
 .b{display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;color:#fff}
 .map{width:100%;height:300px;background:var(--bg);border:1px solid var(--bd);border-radius:10px;display:block}
 .kpi{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 0}.kpi div{background:var(--bg);border:1px solid var(--bd);border-radius:10px;padding:8px;text-align:center}.kpi b{display:block;font-size:17px}.kpi span{font-size:11px;color:var(--mu)}
-ol{padding-left:20px;margin:6px 0}a{color:var(--pr)}.msg{font-size:12px;color:var(--mu);margin-top:6px}
+ol{padding-left:20px;margin:6px 0}a{color:var(--pr)}.msg{font-size:12px;color:var(--mu);margin-top:6px}#rg::placeholder{font-size:12px}
 .row{display:flex;gap:8px;margin-top:8px}.row>*{flex:1}
 .sm{width:auto;padding:5px 9px;font-size:12px;margin:0 2px}.ed{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:20;overflow:auto;padding:max(12px,env(safe-area-inset-top,0px)) 12px 24px}.ed .card{max-width:520px;margin:20px auto}
 </style></head><body>
@@ -44,7 +44,7 @@ ol{padding-left:20px;margin:6px 0}a{color:var(--pr)}.msg{font-size:12px;color:va
 <a id="gout" class="sm" target="_blank" rel="noopener" style="display:none;background:var(--pr);color:#fff;border-radius:8px;text-decoration:none;font-weight:600;margin-top:6px">Abrir esta página directamente en el navegador</a></details>
 <div class="g2" style="display:none"><div><label>Zona UTM</label><input id="uz" inputmode="numeric" value="17"></div><div><label>Hemisferio</label><select id="uh"><option value="S">Sur</option><option value="N">Norte</option></select></div></div>
 </details>
-<div class="utm" id="utm">Lat/Lon: —</div>
+<div class="utm" id="utm" style="display:none">Lat/Lon: —</div>
 <label>Número de poste</label><input id="poste" placeholder="Ej. P-10234">
 <div class="g2" id="rowF"><div><div id="wf"><label>Tipo de falla</label><select id="falla"><option>Apagada</option><option>Prendida de día</option><option>Intermitente / parpadea</option><option>Encendido parcial</option><option>Brazo o luminaria dañada</option><option>Sin energía en el circuito</option></select></div><div id="wr" style="display:none"><label>Tipo de mantenimiento de redes</label><select id="redes"><option>Calibración de tensor</option><option>Calibración de redes</option><option>Poda de vegetación</option><option>Mantenimiento de trafo</option><option>Otro</option></select></div><div id="wc" style="display:none"><label>Tipo de actividad comercial</label><select id="com"><option>Inspección de medidor</option><option>Instalación de medidor</option><option>Cambio de medidor</option><option>Reubicación de medidor</option><option>Retiro de medidor</option><option>Instalación de eventual</option><option>Retiro de eventual</option><option>Otro</option></select></div></div>
 <div><label>Mantenimiento</label><select id="mant"><option>Pendiente</option><option>Ejecutado</option></select></div></div>
@@ -52,23 +52,21 @@ ol{padding-left:20px;margin:6px 0}a{color:var(--pr)}.msg{font-size:12px;color:va
 <div id="wg"><label>Grupo operativo</label><input id="grupo" list="dg" autocomplete="off" placeholder="Ej. 41A"></div></div>
 <label>Observación</label><textarea id="obs" rows="2"></textarea>
 <label>Fotografía (opcional)</label>
-<div class="row"><button type="button" class="s" id="fbtn">📷 Tomar foto</button><button type="button" class="s" id="fx" style="display:none">✖ Quitar foto</button></div>
 <input type="file" id="ffile" accept="image/*" capture="environment" style="display:none">
-<img id="fprev" alt="" style="display:none;max-width:100%;max-height:160px;border-radius:8px;margin-top:6px">
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px"><button type="button" class="s" id="fbtn" style="font-size:13px;padding:10px 4px">📷 Tomar foto</button><button id="add" type="button" style="font-size:13px;padding:10px 4px">Guardar registro</button><button class="s" id="clr" type="button" style="font-size:13px;padding:10px 4px">Limpiar</button></div>
+<img id="fprev" alt="" style="display:none;max-width:100%;max-height:160px;border-radius:8px;margin-top:8px">
+<button type="button" class="s" id="fx" style="display:none;margin-top:6px;font-size:13px;padding:7px">✖ Quitar foto</button>
 <div class="msg" id="fmsg"></div>
-<div class="row"><button id="add" type="button">Guardar registro</button><button class="s" id="clr" type="button">Limpiar</button></div>
 <div class="msg" id="m1"></div></section>
 
 <section class="card"><h2>2. Mapa y ruta óptima</h2>
-<label>Grupo operativo (coincide con la columna «grupo» de la hoja)</label>
-<input id="rg" list="dg" autocomplete="off" autocapitalize="characters" placeholder="Ej. 41A — vacío = todas las pendientes">
-<label style="display:flex;align-items:center;gap:8px;margin-top:6px;font-weight:400"><input type="checkbox" id="rsg" checked style="width:auto;margin:0"> Incluir también las pendientes sin grupo asignado</label>
-<datalist id="dg"></datalist>
-<div class="sub" style="margin-bottom:4px"><b>Partida:</b> Agencia CENTROSUR Biblián</div>
+<div class="sub" style="margin-bottom:4px"><b>Punto de partida inicial:</b> Agencia CENTROSUR Biblián</div>
 <div class="g3" style="align-items:end"><div><label>Este (m)</label><input id="ae" inputmode="decimal"></div><div><label>Norte (m)</label><input id="an" inputmode="decimal"></div><div><label>&nbsp;</label><button id="asv" type="button">Guardar partida</button></div></div>
 <div class="msg" id="am"></div>
-<div class="g3"><div><label>V. prom. (km/h)</label><input id="vel" type="number" value="30" min="5"></div><div><label>Min. por luminaria</label><input id="srv" type="number" value="15" min="0"></div><div><label>Factor vial</label><input id="fv" type="number" value="1.3" step="0.1" min="1"></div></div>
-<div class="row"><button id="ruta" type="button">⚡ Calcular ruta y abrir en Google Maps</button></div>
+<div style="margin-top:8px"><label>Tiempo promedio de actividad <span style="font-size:12px">(min)</span></label><input id="srv" type="number" value="15" min="0" inputmode="numeric"></div>
+<div style="display:grid;grid-template-columns:1fr 1.3fr;gap:8px;align-items:end;margin-top:8px"><div><label>Ingrese grupo operativo:</label><input id="rg" list="dg" autocomplete="off" autocapitalize="characters" placeholder="Ej. 41A — vacío = todas las pendientes" title="Vacío = todas las pendientes"></div><button id="ruta" type="button" style="font-size:14px;padding:9px 6px">⚡ Calcular ruta y abrir en Google Maps</button></div>
+<label style="display:flex;align-items:center;gap:8px;margin-top:8px;font-weight:400"><input type="checkbox" id="rsg" checked style="width:auto;margin:0"> Incluir también las pendientes sin grupo asignado</label>
+<datalist id="dg"></datalist>
 <div class="kpi"><div><b id="kd">—</b><span>Distancia</span></div><div><b id="kt">—</b><span>Traslado</span></div><div><b id="kc">—</b><span>Total con trabajo</span></div></div>
 <svg class="map" id="map" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid meet"></svg>
 <div class="msg">Esquema a escala (UTM) con todos los puntos. Rojo = pendiente, verde = ejecutado, azul = partida. Para navegar use «Calcular ruta y abrir en Google Maps».</div>
@@ -186,13 +184,14 @@ let rest=pts.slice(),path=[o];while(rest.length){const c=path[path.length-1];let
 let imp=true,it=0;while(imp&&it++<60){imp=false;for(let i=1;i<path.length-1;i++)for(let j=i+1;j<path.length;j++){const n=path.slice(0,i).concat(path.slice(i,j+1).reverse(),path.slice(j+1));if(plen(n.concat([o]))<plen(path.concat([o]))-1e-9){path=n;imp=true}}}
 return path}
 const fmt=m=>{m=Math.round(m);return m>=60?Math.floor(m/60)+' h '+String(m%60).padStart(2,'0')+' min':m+' min'};
+let lastTr=null;
 function calc(origin){const pend=pendGrupo(),G=$('rg').value.trim();if(!pend.length){$('m2').textContent='No hay actividades pendientes'+(G?' para el grupo '+G:'')+'.';route=[];start=origin;drawMap();return}
 const o={lat:origin.lat,lon:origin.lon,o:1},p=optimize(o,pend);route=p.slice(1);start=o;
-const fv=num($('fv').value)||1.3,v=num($('vel').value)||30,sv=num($('srv').value)||0,km=plen(p.concat([o]))*fv,tr=km/v*60;
+const fv=1.3,v=30,sv=num($('srv').value)||0,km=plen(p.concat([o]))*fv,tr=km/v*60;lastTr=tr;
 $('kd').textContent=km.toFixed(1)+' km';$('kt').textContent=fmt(tr);$('kc').textContent=fmt(tr+sv*route.length);
 const fe=p=>{const u=utm(p.lat,p.lon);return 'Este '+u.e.toFixed(1)+' · Norte '+u.n.toFixed(1)};
 $('orden').innerHTML='<li><b>Salida: Agencia CENTROSUR Biblián</b><br><span class="utm">'+fe(o)+'</span></li>'+route.map(r=>`<li>${esc(r.poste)} — ${esc(r.falla)} ${r.tipo&&r.tipo!=='—'?'<span class="sub">('+esc(r.tipo)+')</span>':''}${r.grupo?' · <b>'+esc(r.grupo)+'</b>':''}${r.obs?'<br><span class="sub">'+esc(r.obs)+'</span>':''}<br><span class="utm">${fe(r)}</span>${r.fotoid?' <a href="'+esc(r.foto)+'" target="_blank" rel="noopener">📷 Ver foto</a>':''}</li>`).join('')+'<li><b>Regreso: Agencia CENTROSUR Biblián</b><br><span class="utm">'+fe(o)+'</span></li>';
-const asg=G?pend.filter(r=>ng(r.grupo)===ng(G)).length:0;$('m2').textContent=(G?'Ruta del grupo '+G+': '+pend.length+' actividad(es) ('+asg+' asignada(s) + '+(pend.length-asg)+' sin grupo). ':'Ruta de todas las pendientes ('+pend.length+'). ')+'Ruta cerrada: sale y regresa a la agencia. Distancia en línea recta × factor vial; el tiempo real depende del tráfico. Verifique con Google Maps, que muestra los puntos en latitud/longitud; el listado de arriba los da en UTM.';drawMap()}
+const asg=G?pend.filter(r=>ng(r.grupo)===ng(G)).length:0;$('m2').textContent=(G?'Ruta del grupo '+G+': '+pend.length+' actividad(es) ('+asg+' asignada(s) + '+(pend.length-asg)+' sin grupo). ':'Ruta de todas las pendientes ('+pend.length+'). ')+'Ruta cerrada: sale y regresa a la agencia. Distancia, Traslado y Total con trabajo son estimaciones; Google Maps muestra la distancia y el tiempo reales (y los puntos en latitud/longitud; el listado de arriba los da en UTM).';drawMap()}
 const AG_DEF={lat:-2.7167,lon:-78.8833};
 function agStored(){try{const a=JSON.parse(localStorage.getItem('lum_ag')||'null');return a&&isFinite(a.lat)&&isFinite(a.lon)?a:null}catch(e){return null}}
 function fillAg(){const s=agStored(),a=s||AG_DEF,u=utm(a.lat,a.lon);$('ae').value=u.e.toFixed(1);$('an').value=u.n.toFixed(1);$('am').textContent=s?'Coordenada de la agencia guardada.':'⚠ Coordenada APROXIMADA (centro de Biblián). Ingrese la exacta de la agencia y toque «Guardar partida».'}
@@ -204,7 +203,8 @@ function tramoUrl(k){const C=23,S=route.slice(k*C,k*C+C);if(!S.length)return nul
 function openTramo(k){const u=tramoUrl(k);if(!u)return;const a=document.createElement('a');a.href=u;a.target='_blank';a.rel='noopener';document.body.appendChild(a);a.click();a.remove()}
 function tramos(){const n=Math.ceil(route.length/23),st='display:block;text-align:center;background:var(--ok);color:#fff;border-radius:8px;text-decoration:none;font-weight:600;padding:12px;margin-top:8px';$('tramos').innerHTML=!n?'':Array.from({length:n},(_,k)=>`<a style="${st}" href="${tramoUrl(k).replace(/&/g,'&amp;')}" target="_blank" rel="noopener">🗺 ${n>1?'Tramo '+(k+1)+' de '+n+' · ':''}Ver ruta en Google Maps</a>`).join('')+(n>1?'<div class="msg">Google Maps admite hasta 25 puntos por enlace: abra cada tramo en orden.</div>':'')}
 $('tramos').onclick=e=>{const b=e.target.closest('[data-k]');if(b)openTramo(+b.dataset.k)};
-function avisoPartida(){const s=agStored(),t=agRead();if(!s)return' ⚠ La ruta sale de la coordenada APROXIMADA de la agencia: ingrese la exacta en «Partida» y toque «Guardar partida».';if(t&&(Math.abs(t.lat-s.lat)>1e-6||Math.abs(t.lon-s.lon)>1e-6))return' ⚠ La ruta usa la partida escrita, que aún no está guardada: toque «Guardar partida» para que todos los equipos la usen.';return''}
+function avisoPartida(){const s=agStored(),t=agRead();if(!s)return' ⚠ La ruta sale de la coordenada APROXIMADA de la agencia: ingrese la exacta en «Punto de partida inicial» y toque «Guardar partida».';if(t&&(Math.abs(t.lat-s.lat)>1e-6||Math.abs(t.lon-s.lon)>1e-6))return' ⚠ La ruta usa la partida escrita, que aún no está guardada: toque «Guardar partida» para que todos los equipos la usen.';return''}
+$('srv').oninput=()=>{if(route.length&&lastTr!==null)$('kc').textContent=fmt(lastTr+(num($('srv').value)||0)*route.length)};
 $('ruta').onclick=()=>{if(!pendGrupo().length)return $('m2').textContent='No hay actividades pendientes'+($('rg').value.trim()?' para el grupo '+$('rg').value.trim():'')+'.';const p=agRead()||agStored()||AG_DEF;calc({lat:p.lat,lon:p.lon});if(route.length)$('m2').textContent+=avisoPartida();tramos();if(route.length)openTramo(0)};
 fillAg();permCheck();setupOut();
 // ---------- Mapa esquemático ----------
