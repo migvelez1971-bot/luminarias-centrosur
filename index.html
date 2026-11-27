@@ -22,7 +22,7 @@ th,td{border-bottom:1px solid var(--bd);padding:6px;text-align:left;white-space:
 .b{display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;color:#fff}
 .map{width:100%;height:300px;background:var(--bg);border:1px solid var(--bd);border-radius:10px;display:block}
 .kpi{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 0}.kpi div{background:var(--bg);border:1px solid var(--bd);border-radius:10px;padding:8px;text-align:center}.kpi b{display:block;font-size:17px}.kpi span{font-size:11px;color:var(--mu)}
-ol{padding-left:20px;margin:6px 0}a{color:var(--pr)}.msg{font-size:12px;color:var(--mu);margin-top:6px}#rg::placeholder{font-size:12px}
+ol{padding-left:20px;margin:6px 0}a{color:var(--pr)}.msg{font-size:12px;color:var(--mu);margin-top:6px}.lnum{background:rgba(255,255,255,.92);border:0;color:#0b2540;font-weight:700;padding:1px 5px;box-shadow:0 1px 3px rgba(0,0,0,.35)}.lnum:before{display:none}#rg::placeholder{font-size:12px}
 .row{display:flex;gap:8px;margin-top:8px}.row>*{flex:1}
 .sm{width:auto;padding:5px 9px;font-size:12px;margin:0 2px}.ed{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:20;overflow:auto;padding:max(12px,env(safe-area-inset-top,0px)) 12px 24px}.ed .card{max-width:520px;margin:20px auto}
 </style></head><body>
@@ -68,8 +68,9 @@ ol{padding-left:20px;margin:6px 0}a{color:var(--pr)}.msg{font-size:12px;color:va
 <label style="display:flex;align-items:center;gap:8px;margin-top:8px;font-weight:400"><input type="checkbox" id="rsg" checked style="width:auto;margin:0"> Incluir también las pendientes sin grupo asignado</label>
 <datalist id="dg"></datalist>
 <div class="kpi"><div><b id="kd">—</b><span>Distancia</span></div><div><b id="kt">—</b><span>Traslado</span></div><div><b id="kc">—</b><span>Total con trabajo</span></div></div>
+<div id="lmap" style="display:none;height:340px;border:1px solid var(--bd);border-radius:12px;overflow:hidden;position:relative;z-index:0"></div>
 <svg class="map" id="map" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid meet"></svg>
-<div class="msg">Esquema a escala (UTM) con todos los puntos. Rojo = pendiente, verde = ejecutado, azul = partida. Para navegar use «Calcular ruta y abrir en Google Maps».</div>
+<div class="msg">Mapa con todos los puntos. Rojo = pendiente, verde = ejecutado, azul = partida. Toque un punto para ver su detalle y use el botón de capas (arriba a la derecha) para cambiar entre Mapa y Satélite. Para navegar use «Calcular ruta y abrir en Google Maps».</div>
 <ol id="orden"></ol><div id="tramos"></div><div class="msg" id="m2"></div></section>
 
 <section class="card"><h2>3. Hoja de registros <span class="sub" id="cnt"></span></h2>
@@ -210,7 +211,36 @@ $('srv').oninput=()=>{if(route.length&&lastTr!==null)$('kc').textContent=fmt(las
 $('ruta').onclick=()=>{if(!pendGrupo().length)return $('m2').textContent='No hay actividades pendientes'+($('rg').value.trim()?' para el grupo '+$('rg').value.trim():'')+'.';const p=agRead()||agStored()||AG_DEF;calc({lat:p.lat,lon:p.lon});if(route.length)$('m2').textContent+=avisoPartida();tramos();if(route.length)openTramo(0)};
 fillAg();permCheck();setupOut();
 // ---------- Mapa esquemático ----------
-function drawMap(){const s=$('map'),pts=rows.map(r=>({...r,u:utm(r.lat,r.lon)}));if(start)pts.push({lat:start.lat,lon:start.lon,u:utm(start.lat,start.lon),o:1});
+// ---------- Mapa con fondo (Leaflet + OpenStreetMap / satélite) ----------
+let LM=null,LG=null,lmState='idle',lmSig=null;
+const LCDN=['https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/','https://unpkg.com/leaflet@1.9.4/dist/'];
+function loadLeaflet(i){i=i||0;if(i===0){if(lmState!=='idle')return;lmState='loading'}
+ if(i>=LCDN.length){lmState='fail';return}
+ if(typeof L!=='undefined'){lmReady();return}
+ const css=document.createElement('link');css.rel='stylesheet';css.href=LCDN[i]+'leaflet.css';css.onload=()=>{if(LM)LM.invalidateSize()};document.head.appendChild(css);
+ const sc=document.createElement('script');sc.src=LCDN[i]+'leaflet.js';sc.onload=lmReady;sc.onerror=()=>{sc.remove();css.remove();loadLeaflet(i+1)};document.head.appendChild(sc)}
+function lmReady(){try{initLM();lmState='ready';drawMap()}catch(e){lmState='fail';$('lmap').style.display='none';$('map').style.display='';drawMap()}}
+function initLM(){const el=$('lmap');el.style.display='block';$('map').style.display='none';
+ const calles=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}),
+  sat=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Imágenes © Esri, Maxar, Earthstar Geographics'});
+ LM=L.map(el,{layers:[calles]}).setView([-2.7167,-78.8833],13);
+ L.control.layers({'Mapa':calles,'Satélite':sat},null,{position:'topright',collapsed:true}).addTo(LM);
+ LG=L.layerGroup().addTo(LM);
+ LM.scrollWheelZoom.disable();LM.on('click',()=>LM.scrollWheelZoom.enable());el.addEventListener('mouseleave',()=>LM.scrollWheelZoom.disable());
+ setTimeout(()=>{if(LM)LM.invalidateSize()},60)}
+function drawLM(){LG.clearLayers();const b=[],ok=r=>isFinite(r.lat)&&isFinite(r.lon);
+ const path=start&&route.length?[start].concat(route,[start]).filter(ok):[];
+ if(path.length>1)L.polyline(path.map(p=>[p.lat,p.lon]),{color:'#1d6fd8',weight:3,dashArray:'6 6',opacity:.9}).addTo(LG);
+ rows.filter(ok).forEach(r=>{const i=route.findIndex(x=>x.id===r.id),m=L.circleMarker([r.lat,r.lon],{radius:7,color:'#ffffff',weight:2,fillColor:r.mant==='Ejecutado'?'#1f9d55':'#d93a3a',fillOpacity:1}).addTo(LG);
+  m.bindPopup('<b>'+esc(r.poste)+'</b><br>'+esc(r.falla)+'<br>'+esc(r.mant)+(r.grupo?' · Grupo '+esc(r.grupo):'')+(i>=0?'<br>Orden de visita: '+(i+1):'')+'<br><a href="https://www.google.com/maps/search/?api=1&query='+r.lat+','+r.lon+'" target="_blank" rel="noopener">Abrir en Google Maps</a>');
+  if(i>=0)m.bindTooltip(String(i+1),{permanent:true,direction:'right',offset:[6,0],className:'lnum'});b.push([r.lat,r.lon])});
+ if(start&&ok(start)){L.circleMarker([start.lat,start.lon],{radius:9,color:'#ffffff',weight:2,fillColor:'#1d6fd8',fillOpacity:1}).bindTooltip('Punto de partida').addTo(LG);b.push([start.lat,start.lon])}
+ const sig=rows.map(r=>r.id).join(',')+'|'+(start?start.lat+','+start.lon:'')+'|'+route.length;
+ if(b.length&&sig!==lmSig){lmSig=sig;LM.invalidateSize();LM.fitBounds(b,{padding:[28,28],maxZoom:18})}}
+function drawMap(){if(lmState==='ready'&&LM){try{drawLM();return}catch(e){lmState='fail';$('lmap').style.display='none';$('map').style.display=''}}
+ if(lmState==='idle')loadLeaflet();
+ drawSvg()}
+function drawSvg(){const s=$('map'),pts=rows.map(r=>({...r,u:utm(r.lat,r.lon)}));if(start)pts.push({lat:start.lat,lon:start.lon,u:utm(start.lat,start.lon),o:1});
 if(!pts.length){s.innerHTML='<text x="200" y="150" text-anchor="middle" fill="currentColor" font-size="12" opacity=".6">Sin puntos registrados</text>';return}
 const E=pts.map(p=>p.u.e),N=pts.map(p=>p.u.n),x0=Math.min(...E),x1=Math.max(...E),y0=Math.min(...N),y1=Math.max(...N),sp=Math.max(x1-x0,y1-y0,60),m=24,sc=(300-2*m)/sp;
 const X=p=>200+(p.u.e-(x0+x1)/2)*sc,Y=p=>150-(p.u.n-(y0+y1)/2)*sc;let h='';
